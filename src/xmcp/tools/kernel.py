@@ -215,6 +215,7 @@ async def execute_notebook_cell(
     notebook_path: str,
     cell_index: int,
     timeout: float | None = None,
+    save_outputs: bool = True,
 ) -> str:
     """
     Execute a specific cell in a notebook.
@@ -223,12 +224,14 @@ async def execute_notebook_cell(
     1. Get or create a kernel session for the notebook
     2. Read the cell content
     3. Execute the code
-    4. Return the output
+    4. Save outputs to notebook (if save_outputs=True)
+    5. Return the output
 
     Args:
         notebook_path: Path to the notebook
         cell_index: Index of the cell to execute (0-based)
         timeout: Execution timeout in seconds
+        save_outputs: Whether to save outputs to notebook file (default: True)
 
     Returns:
         JSON string with execution result
@@ -265,9 +268,58 @@ async def execute_notebook_cell(
     code = cell.get("source", "")
     result = await client.execute_code(kernel_id, code, timeout)
 
+    # - Save outputs to notebook if requested
+    if save_outputs:
+        # - Convert outputs to notebook format
+        nb_outputs = []
+        for output in result.get("outputs", []):
+            if output["type"] == "stream":
+                nb_outputs.append({
+                    "output_type": "stream",
+                    "name": output.get("name", "stdout"),
+                    "text": output.get("text", ""),
+                })
+            elif output["type"] == "execute_result":
+                nb_outputs.append({
+                    "output_type": "execute_result",
+                    "data": output.get("data", {}),
+                    "metadata": {},
+                    "execution_count": output.get("execution_count"),
+                })
+            elif output["type"] == "display_data":
+                nb_outputs.append({
+                    "output_type": "display_data",
+                    "data": output.get("data", {}),
+                    "metadata": output.get("metadata", {}),
+                })
+            elif output["type"] == "error":
+                nb_outputs.append({
+                    "output_type": "error",
+                    "ename": output.get("ename", "Error"),
+                    "evalue": output.get("evalue", ""),
+                    "traceback": output.get("traceback", []),
+                })
+
+        # - Handle error output
+        if result.get("error"):
+            nb_outputs.append({
+                "output_type": "error",
+                "ename": result["error"].get("ename", "Error"),
+                "evalue": result["error"].get("evalue", ""),
+                "traceback": result["error"].get("traceback", []),
+            })
+
+        # - Update cell outputs and execution count
+        cells[cell_index]["outputs"] = nb_outputs
+        cells[cell_index]["execution_count"] = len([c for c in cells[:cell_index+1] if c.get("cell_type") == "code"])
+
+        # - Save notebook
+        await client.save_notebook(notebook_path, content)
+
     return json.dumps({
         "cell_index": cell_index,
         "status": result["status"],
         "outputs": result.get("outputs", []),
         "error": result.get("error"),
+        "saved_to_notebook": save_outputs,
     }, indent=2)

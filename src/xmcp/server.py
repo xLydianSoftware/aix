@@ -282,7 +282,8 @@ async def jupyter_execute_cell(
     This will:
     1. Connect to the notebook's kernel (or create one)
     2. Execute the cell's code
-    3. Return the execution outputs
+    3. Save outputs to notebook file (visible in VS Code)
+    4. Return the execution outputs
 
     Args:
         notebook_path: Path to the notebook
