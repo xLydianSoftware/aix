@@ -152,7 +152,7 @@ from xincubator.indicators.momentum import rsi_divergence
 ### Quick Data Access Pattern
 
 ```python
-# - get storage
+# - get storage (do this ONCE, then reuse)
 storage = StorageRegistry.get("qdb::quantlab")
 reader = storage["BINANCE.UM", "SWAP"]
 
@@ -167,6 +167,22 @@ df = reader.read(
     start="2024-01-01",
     stop="2024-06-01"
 ).transform(PandasFrame())
+```
+
+### Best Practice: Create Storage/Reader Once
+
+**DO NOT** recreate storage and reader every time you load data. Create them once in a separate cell, then reuse:
+
+```python
+# - Cell 1: Create storage and reader (run once)
+storage = StorageRegistry.get("qdb::quantlab")
+ohlc_reader = storage["BINANCE.UM", "SWAP"]
+fund_reader = storage["COINGECKO", "FUNDAMENTAL"]
+
+# - Cell 2+: Reuse reader for multiple queries
+df1 = ohlc_reader.read(["BTCUSDT"], "ohlc(1h)", "2024-01-01", "2024-06-01").transform(PandasFrame())
+df2 = ohlc_reader.read(["ETHUSDT"], "ohlc(1h)", "2024-01-01", "2024-06-01").transform(PandasFrame())
+fund = fund_reader.read(assets, "fundamental", start, stop).transform(PandasFrame(True))
 ```
 
 ### When You Need Simulation
