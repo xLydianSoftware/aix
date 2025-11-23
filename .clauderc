@@ -1,0 +1,250 @@
+global:
+  tools:
+    - notion
+    - computer_use
+    - web_search
+  
+  memory: true
+   
+  shared_context: |
+    User is a quantitative analyst working primarily with:
+    - Qubx framework for strategy development and backtesting
+    - Quantkit for machine learning, trackers etc extensions
+    - Python/Cython for high-performance implementations
+    - Crypto markets (primarily BTCUSDT, ETHUSDT, ... perpetuals and spot on Binance, Kraken, Hyperliquid etc)
+
+    Core infrastructure:
+    - Qubx: ~/devs/Qubx/
+    - Quantkit: ~/devs/quantkit/
+    - Research projects: ~/projects/
+    - Backtests results: /backtests/{strategy_type}/{strategy_name}/
+    - Live results: ~/data/runs/live/
+    - Paper results: ~/data/runs/paper/
+
+    Shared documentation (always consult before implementing):
+    - Strategy building: ~/.claude/shared/qubx-strategy.md
+    - Config structure: ~/.claude/shared/qubx-config.md
+    - Market data access: ~/.claude/shared/qubx-data.md
+    - Research notebooks: ~/.claude/shared/qubx-notebooks.md
+    
+    Project Structure Convention:
+    Each project follows this structure:
+    
+    ~/projects/<project_name>/
+    ├── research/                      # Research notebooks organized by topic
+    │   ├── <topic>/                   # e.g., altdata/, momentum/quicktrade/
+    │   │   ├── exploration.ipynb
+    │   │   ├── analysis.ipynb
+    │   │   └── results/
+    │   └── ...
+    ├── src/<project_module>/          # All Python code
+    │   ├── indicators/                # Custom indicators (research + strategies)
+    │   │   ├── __init__.py
+    │   │   ├── momentum.py
+    │   │   └── volatility.py
+    │   ├── models/                    # Strategy implementations (organized by type)
+    │   │   ├── momentum/
+    │   │   │   ├── quicktrade/
+    │   │   │   │   ├── model0.py
+    │   │   │   │   └── model1.py
+    │   │   │   └── trend_following/
+    │   │   ├── mean_reversion/
+    │   │   ├── arbitrage/
+    │   │   └── ...
+    │   ├── research/                  # Research utilities and helpers
+    │   │   ├── __init__.py
+    │   │   ├── data_utils.py
+    │   │   ├── analysis.py
+    │   │   └── visualization.py
+    │   └── utils/                     # Generic utilities (strategies + research)
+    │       ├── __init__.py
+    │       ├── config.py
+    │       └── io.py
+    ├── tests/<project_module>/        # Test suite
+    │   ├── test_indicators.py
+    │   ├── test_models.py
+    │   └── test_utils.py
+    ├── configs/                       # Configuration files
+    │   └── quicktrade/
+    ├── pyproject.toml                 # Project dependencies
+    ├── build.py                       # Project building script
+    ├── justfile                       # Project just file config
+    └── README.md
+    
+    CRITICAL RULES:
+    1. NEVER put .py files directly in research/ folders
+    2. All Python code goes in src/<project_module>/
+    3. Research notebooks import from <project_module>
+    4. Indicators go in src/<project_module>/indicators/
+    5. Strategies go in src/<project_module>/models/<strategy_type>/
+    6. Research helpers go in src/<project_module>/research/
+    7. Generic utils go in src/<project_module>/utils/
+
+# Agent definitions
+agents:
+  quantdev:
+    file: ~/.claude/agents/quantdev.md
+    description: "MUST USE PROACTIVELY for all Qubx framework work. Agent name: 'Rey' (also responds to: quantdev, quant-developer). Expert quantitative developer specializing in: strategy implementation, indicator development, backtest execution/debugging, YAML config generation (simulation + live), performance optimization, and production deployment. Use IMMEDIATELY when user mentions: Rey, strategies, indicators, backtests, configs, Qubx, tmux sessions, BacktestsResultsManager, performance metrics, or asks to implement/optimize/debug/deploy trading systems."
+
+    skills:
+      - qubx_implementation          # Strategy and indicator implementation
+      - qubx-indicators              # Streaming indicators development
+      - backtest_analysis            # Performance analysis and debugging
+      - config_generation            # YAML config creation (simulation + live)
+      - tmux_backtesting             # Long-running backtests in tmux sessions
+      - live_deployment              # Paper/live trading setup
+
+    primary_tasks:
+      - Implement strategies from specs/ideas/Pine Script/research notebooks
+      - Create/modify indicators in src/<project_module>/indicators/ using qubx-indicators skills
+      - Generate unified YAML configs for simulation and live trading
+      - Validate configs: poetry run python -m qubx.cli.commands <config.yaml>
+      - Run backtests in tmux sessions with standardized output paths
+      - List backtest results: BacktestsResultsManager('/backtests/<folder>/').list()
+      - Optimize strategy code for performance (vectorization, numba, streaming)
+      - Debug backtest issues (look-ahead bias, data issues, logic errors)
+      - Prepare production deployment (paper → live transition)
+      - Create unit tests for strategies and indicators
+
+    working_directories:
+      Primary:
+      - src/<project_module>/models/     (strategy implementations)
+      - src/<project_module>/indicators/ (custom indicators)
+      - configs/<strategy_name>/         (unified configs: simulation + live)
+      - tests/<project_module>/          (unit tests)
+      - /backtests/<type>/<name>/        (backtest results)
+
+      Reference:
+      - ~/.claude/shared/qubx-strategy.md                               (Strategy building guide)
+      - ~/.claude/shared/qubx-config.md                                 (Config structure - simulation + live)
+      - ~/.claude/shared/qubx-data.md                                   (Qubx market data structure utilities)
+      - ~/.claude/shared/qubx-strategy-debugging.md                     (Debugging techniques)
+      - ~/.claude/shared/qubx-implementing-streaming-indicators.md      (Indicator implementation)
+      - ~/devs/Qubx/                                                    (Qubx framework source)
+      - ~/devs/quantkit/                                                (Quantkit extensions)
+      - research/<topic>/                                               (Understanding strategy logic)
+
+    file_patterns: |
+      Creates and modifies:
+      - ✅ *.py files in src/<project_module>/
+      - ✅ *.yaml config files in configs/<strategy_name>/
+      - ✅ test_*.py files in tests/<project_module>/
+      - ✅ *.ipynb files
+      - ✅ *.md documentation files
+
+      Never touches:
+      - ❌ *.py files directly in research/ folders (NEVER!)
+      - ❌ Files in ~/devs/Qubx/ or ~/devs/quantkit/ (external dependencies)
+
+    config_conventions: |
+      Config file organization:
+      - Location: configs/<strategy_name>/<config_name>.yaml
+      - Naming: strategy.modification.parameters.yaml
+        Examples: nimble.advrisk.48h.yaml, gemini.v0.kama.yaml
+      - Required fields: name, description (purpose and changes)
+      - Unified: same config for simulation, paper, and live
+
+      Backtest execution:
+      - Always in tmux sessions (avoid disconnects)
+      - Session naming: backtest-{config_name}
+      - Output path: /backtests/{strategy_type}/{strategy_name}/
+      - DO NOT WAIT for completion (can run hours/days)
+
+      Template command:
+      SESSION="backtest-{config}"; exec tmux new-session -s -d "$SESSION" -- poetry run python -m qubx.cli.commands simulate {config.yaml} -o /backtests/{type}/{name}/  
+
+  # quantresearcher: TO BE DEFINED LATER
+
+# Performance and token optimization
+optimization:
+  # Lazy load agent definitions (only when needed)
+  lazy_load_agents: true
+  
+  # Cache frequently used resources
+  cache_resources: true
+  
+  # Compress context when possible
+  compress_context: false  # Set true if hitting token limits
+  
+
+# Version and metadata
+metadata:
+  version: "2.0.0"
+  last_updated: "2025-11-20"
+  author: "Dmitry Marienko"
+  description: "Quantitative trading research and development configuration"
+
+  # Agent versions (for tracking changes)
+  agent_versions:
+    quantdev: "2.0.0"  # Major update: unified configs, tmux backtesting, comprehensive guides
+
+  # Resource versions
+  resource_versions:
+    code_standards: "1.0.0"
+    infrastructure: "2.0.0"      # Updated: standardized backtest output paths, tmux sessions
+    workflows: "2.0.0"           # Updated: config validation, tmux workflows, naming conventions
+    qubx_reference: "2.0.0"      # Updated: qubx-strategy.md, qubx-config.md in shared folder
+
+  # Changelog
+  changes_v2:
+    - "Created comprehensive strategy building guide: ~/.claude/shared/qubx-strategy.md"
+    - "Created unified config guide: ~/.claude/shared/qubx-config.md"
+    - "Added tmux-based backtest execution pattern"
+    - "Standardized output paths: /backtests/{type}/{name}/"
+    - "Added config validation workflow"
+    - "Unified configs for simulation and live trading"
+    - "Added config naming conventions: strategy.modification.parameters.yaml"
+    - "Added data loader utility documentation"
+    - "Added live/paper trading configuration documentation"
+
+# Debugging and development
+debug:
+  # Enable verbose logging
+  verbose: false
+  
+  # Log agent switches
+  log_agent_switches: false
+  
+  # Log resource loads
+  log_resource_loads: false
+  
+  # Show token usage
+  show_token_usage: false
+
+
+# Backup and safety
+safety:
+  # Confirm before destructive operations
+  confirm_destructive: true
+  
+  # Operations that require confirmation
+  destructive_operations:
+    - "Delete strategy files"
+    - "Modify live configs"
+    - "Clear backtest results"
+    - "Override existing models"
+  
+  # Auto-backup before major changes
+  auto_backup: false
+  backup_location: "~/.claude/backups/"
+
+# Future extensibility
+extensions:
+  # Custom agent definitions can be added here
+  custom_agents: []
+  
+  # Custom resources can be added here
+  custom_resources: []
+  
+  # Plugin system (for future use)
+  plugins: []
+
+# Notes for future updates
+notes: |
+  Update checklist when modifying this config:
+  1. Update metadata.version and metadata.last_updated
+  2. Update agent_versions if agent files change
+  3. Update resource_versions if resource files change
+  4. Test token usage with new changes
+  5. Document breaking changes
+  6. Update templates if structure changes
