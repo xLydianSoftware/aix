@@ -31,17 +31,32 @@ dev-install:
 
 # - Update version (patch/minor/major)
 update-version part="patch":
-	@echo "Updating version ({{part}})..."
-	@python -c "import toml; \
-		f = 'pyproject.toml'; \
-		d = toml.load(f); \
-		v = d['project']['version'].split('.'); \
-		i = {'major': 0, 'minor': 1, 'patch': 2}['{{part}}']; \
-		v[i] = str(int(v[i]) + 1); \
-		v = [v[0], v[1] if i < 1 else '0', v[2] if i < 2 else '0']; \
-		d['project']['version'] = '.'.join(v); \
-		toml.dump(d, open(f, 'w')); \
-		print(f\"Version updated to {d['project']['version']}\")"
+	#!/usr/bin/env bash
+	set -euo pipefail
+	echo "Updating version ({{part}})..."
+	current=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+	IFS='.' read -r major minor patch <<< "$current"
+	case "{{part}}" in
+		major)
+			major=$((major + 1))
+			minor=0
+			patch=0
+			;;
+		minor)
+			minor=$((minor + 1))
+			patch=0
+			;;
+		patch)
+			patch=$((patch + 1))
+			;;
+		*)
+			echo "Error: part must be major, minor, or patch"
+			exit 1
+			;;
+	esac
+	new_version="$major.$minor.$patch"
+	sed -i "s/^version = \".*\"/version = \"$new_version\"/" pyproject.toml
+	echo "✓ Version updated: $current → $new_version"
 
 # - Publish to PyPI (requires main branch)
 publish: build test

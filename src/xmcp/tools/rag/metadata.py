@@ -1,0 +1,191 @@
+"""
+Metadata extraction from markdown files.
+Handles YAML frontmatter and inline hashtags.
+"""
+
+import json
+import re
+from typing import Any
+
+import frontmatter
+
+from xmcp.tools.rag.models import DocumentEntity, DocumentMetadata
+
+
+def extract_inline_hashtags(text: str) -> list[str]:
+    """
+    Extract inline hashtags from markdown text.
+
+    Pattern: #[a-zA-Z][a-zA-Z0-9_-]*
+    Excludes code blocks, inline code, and HTML color codes.
+
+    Args:
+        text: Markdown content
+
+    Returns:
+        List of unique hashtags (including #)
+    """
+    # - Remove code blocks (``` ... ```)
+    text = re.sub(r"```[\s\S]*?```", "", text)
+
+    # - Remove inline code (` ... `)
+    text = re.sub(r"`[^`]*`", "", text)
+
+    # - Remove HTML color attributes (color='#...' or color="#...")
+    text = re.sub(r"""color\s*=\s*['"]#[a-fA-F0-9]{3,8}['"]""", "", text)
+
+    # - Find hashtags: # followed by letter, then letters/numbers/hyphens/underscores
+    # - Must NOT be followed by hex digits (to exclude standalone color codes)
+    pattern = r"#[a-zA-Z][a-zA-Z0-9_-]*(?![a-fA-F0-9])"
+    tags = re.findall(pattern, text)
+
+    # - Filter out any remaining hex color codes (e.g., #ff0000, #f86d2d)
+    tags = [tag for tag in tags if not re.match(r"^#[a-fA-F0-9]{3,8}$", tag)]
+
+    # - Return unique tags (case-sensitive)
+    return list(set(tags))
+
+
+def parse_float_safe(value: Any) -> float | None:
+    """
+    Safely parse float from frontmatter value.
+    """
+    if value is None:
+        return None
+
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def parse_frontmatter(file_path: str) -> tuple[dict, str]:
+    """
+    Parse YAML frontmatter from markdown file.
+
+    Args:
+        file_path: Path to markdown file
+
+    Returns:
+        (frontmatter_dict, content)
+    """
+    try:
+        with open(file_path, encoding="utf-8") as f:
+            post = frontmatter.load(f)
+            return dict(post.metadata), post.content
+    except (FileNotFoundError, PermissionError, UnicodeDecodeError):
+        # - Return empty frontmatter if file can't be read
+        return {}, ""
+    except Exception:
+        # - Catch any frontmatter parsing errors
+        try:
+            with open(file_path, encoding="utf-8") as f:
+                content = f.read()
+            return {}, content
+        except Exception:
+            return {}, ""
+
+
+def extract_metadata(file_path: str) -> DocumentMetadata:
+    """
+    Extract complete metadata from markdown file.
+
+    Combines YAML frontmatter and inline hashtags.
+
+    Args:
+        file_path: Path to markdown file
+
+    Returns:
+        DocumentMetadata with all extracted fields
+    """
+    fm_data, content = parse_frontmatter(file_path)
+
+    # - Extract inline hashtags from content
+    inline_tags = extract_inline_hashtags(content)
+
+    # - Get frontmatter tags (could be list or string)
+    fm_tags = fm_data.get("tags", [])
+    if isinstance(fm_tags, str):
+        # - Handle comma-separated tags
+        fm_tags = [tag.strip() for tag in fm_tags.split(",")]
+    elif not isinstance(fm_tags, list):
+        fm_tags = []
+
+    # - Normalize frontmatter tags (add # if missing)
+    normalized_fm_tags = []
+    for tag in fm_tags:
+        tag = tag.strip()
+        if tag and not tag.startswith("#"):
+            tag = f"#{tag}"
+        if tag:
+            normalized_fm_tags.append(tag)
+
+    # - Combine and deduplicate tags
+    all_tags = list(set(normalized_fm_tags + inline_tags))
+    all_tags.sort()  # Sort for consistency
+
+    # - Extract other metadata fields
+    # - Handle "Type" field (reserved keyword) -> type_field
+    type_value = fm_data.get("Type") or fm_data.get("type")
+
+    # - Build metadata object
+    metadata = DocumentMetadata(
+        tags=all_tags,
+        created=str(fm_data.get("Created") or fm_data.get("created") or ""),
+        author=str(fm_data.get("Author") or fm_data.get("author") or ""),
+        type_field=str(type_value) if type_value else None,
+        strategy=str(fm_data.get("strategy") or "") or None,
+        sharpe=parse_float_safe(fm_data.get("sharpe")),
+        cagr=parse_float_safe(fm_data.get("cagr")),
+        drawdown=parse_float_safe(fm_data.get("drawdown")),
+        custom={},
+    )
+
+    # - Store other frontmatter fields in custom
+    skip_fields = {
+        "tags",
+        "Created",
+        "created",
+        "Author",
+        "author",
+        "Type",
+        "type",
+        "strategy",
+        "sharpe",
+        "cagr",
+        "drawdown",
+    }
+    for key, value in fm_data.items():
+        if key not in skip_fields:
+            metadata.custom[key] = value
+
+    return metadata
+
+
+def build_entity_dict(chunk: str, metadata: DocumentMetadata, filename: str, path: str) -> dict:
+    """
+    Build Milvus entity dict from chunk and metadata.
+
+    Args:
+        chunk: Text chunk content
+        metadata: Document metadata
+        filename: File name
+        path: Absolute file path
+
+    Returns:
+        Dict ready for Milvus insertion (without vector - added separately)
+    """
+    return {
+        "text": chunk,
+        "filename": filename,
+        "path": path,
+        # - Flattened metadata for filtering
+        "tags_str": json.dumps(metadata.tags),
+        "type_field": metadata.type_field,
+        "strategy": metadata.strategy,
+        "sharpe": metadata.sharpe,
+        "cagr": metadata.cagr,
+        "drawdown": metadata.drawdown,
+        # - Full metadata as JSON
+        "metadata_json": metadata.model_dump_json(),
+    }

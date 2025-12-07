@@ -6,8 +6,8 @@ import json
 
 import nbformat
 
-from xmcp.client import get_client
 from xmcp.config import validate_path
+from xmcp.tools.jupyter.client import get_client
 
 
 async def list_notebooks(directory: str = "") -> str:

@@ -2,7 +2,7 @@
 
 import json
 
-from xmcp.client import get_client
+from xmcp.tools.jupyter.client import get_client
 
 
 async def list_kernels() -> str:

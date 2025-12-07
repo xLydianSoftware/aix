@@ -6,59 +6,86 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 # - Load environment variables
 load_dotenv()
 
 
+def get_env_str(key: str, default: str) -> str:
+    """Get string from environment."""
+    return os.getenv(key, default)
+
+
+def get_env_int(key: str, default: int) -> int:
+    """Get int from environment."""
+    return int(os.getenv(key, str(default)))
+
+
+def get_env_float(key: str, default: float) -> float:
+    """Get float from environment."""
+    return float(os.getenv(key, str(default)))
+
+
+def get_env_bool(key: str, default: bool) -> bool:
+    """Get bool from environment."""
+    return os.getenv(key, str(default).lower()).lower() == "true"
+
+
+def get_env_path(key: str, default: str) -> Path:
+    """Get path from environment."""
+    return Path(os.getenv(key, default)).expanduser()
+
+
+def get_env_paths(key: str, default: str) -> list[Path]:
+    """Get list of paths from environment."""
+    return [Path(p.strip()).expanduser() for p in os.getenv(key, default).split(",")]
+
+
 class JupyterConfig(BaseModel):
     """JupyterHub configuration."""
 
-    # - JupyterHub server URL (e.g., http://localhost:8888)
-    server_url: str = Field(default_factory=lambda: os.getenv("JUPYTER_SERVER_URL", "http://localhost:8888"))
+    model_config = {"arbitrary_types_allowed": True}
 
-    # - API token for authentication
-    api_token: str = Field(default_factory=lambda: os.getenv("JUPYTER_API_TOKEN", ""))
-
-    # - Default notebook directory
-    notebook_dir: Path = Field(default_factory=lambda: Path(os.getenv("JUPYTER_NOTEBOOK_DIR", "~/")))
-
-    # - Allowed directories (security - prevent access outside these)
-    allowed_dirs: list[Path] = Field(
-        default_factory=lambda: [
-            Path(p.strip()).expanduser() for p in os.getenv("JUPYTER_ALLOWED_DIRS", "~/").split(",")
-        ]
-    )
-
-    # - WebSocket timeout (seconds)
-    ws_timeout: float = Field(default_factory=lambda: float(os.getenv("JUPYTER_WS_TIMEOUT", "30")))
-
-    # - Execution timeout (seconds)
-    exec_timeout: float = Field(default_factory=lambda: float(os.getenv("JUPYTER_EXEC_TIMEOUT", "300")))
+    server_url: str = get_env_str("JUPYTER_SERVER_URL", "http://localhost:8888")
+    api_token: str = get_env_str("JUPYTER_API_TOKEN", "")
+    notebook_dir: Path = get_env_path("JUPYTER_NOTEBOOK_DIR", "~/")
+    allowed_dirs: list[Path] = get_env_paths("JUPYTER_ALLOWED_DIRS", "~/")
+    ws_timeout: float = get_env_float("JUPYTER_WS_TIMEOUT", 30.0)
+    exec_timeout: float = get_env_float("JUPYTER_EXEC_TIMEOUT", 300.0)
 
 
 class MCPConfig(BaseModel):
     """MCP server configuration."""
 
-    # - Server name
     name: str = "xmcp-jupyter"
+    transport: str = get_env_str("MCP_TRANSPORT", "stdio")
+    http_port: int = get_env_int("MCP_HTTP_PORT", 8765)
+    max_output_tokens: int = get_env_int("MCP_MAX_OUTPUT_TOKENS", 25000)
 
-    # - Transport type: stdio or http
-    transport: str = Field(default_factory=lambda: os.getenv("MCP_TRANSPORT", "stdio"))
 
-    # - HTTP port (if transport=http)
-    http_port: int = Field(default_factory=lambda: int(os.getenv("MCP_HTTP_PORT", "8765")))
+class RAGConfig(BaseModel):
+    """RAG configuration."""
 
-    # - Max output tokens
-    max_output_tokens: int = Field(default_factory=lambda: int(os.getenv("MCP_MAX_OUTPUT_TOKENS", "25000")))
+    model_config = {"arbitrary_types_allowed": True}
+
+    cache_dir: Path = get_env_path("RAG_CACHE_DIR", "~/.aix/knowledge")
+    chunk_size: int = get_env_int("RAG_CHUNK_SIZE", 512)
+    chunk_overlap: int = get_env_int("RAG_CHUNK_OVERLAP", 100)
+    auto_refresh: bool = get_env_bool("RAG_AUTO_REFRESH", True)
+    auto_refresh_interval: int = get_env_int("RAG_AUTO_REFRESH_INTERVAL", 300)
+    default_search_limit: int = get_env_int("RAG_DEFAULT_SEARCH_LIMIT", 10)
+    default_similarity_threshold: float = get_env_float("RAG_DEFAULT_SIMILARITY_THRESHOLD", 0.5)
 
 
 class Config(BaseModel):
     """Combined configuration."""
 
-    jupyter: JupyterConfig = Field(default_factory=JupyterConfig)
-    mcp: MCPConfig = Field(default_factory=MCPConfig)
+    model_config = {"arbitrary_types_allowed": True}
+
+    jupyter: JupyterConfig = JupyterConfig()
+    mcp: MCPConfig = MCPConfig()
+    rag: RAGConfig = RAGConfig()
 
 
 # - Global config instance

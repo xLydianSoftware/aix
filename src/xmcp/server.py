@@ -10,7 +10,8 @@ import sys
 from fastmcp import FastMCP
 
 from xmcp.config import get_config
-from xmcp.tools import kernel, notebook
+from xmcp.tools.jupyter import kernel, notebook
+from xmcp.tools.rag import indexer, registry, searcher, storage
 
 # - Create MCP server
 config = get_config()
@@ -294,6 +295,143 @@ async def jupyter_execute_cell(
         JSON with cell_index, status, outputs, and error if any
     """
     return await kernel.execute_notebook_cell(notebook_path, cell_index, timeout)
+
+
+# =============================================================================
+# Markdown RAG Tools
+# =============================================================================
+
+
+@mcp.tool()
+async def markdown_index_directory(
+    directory: str,
+    recursive: bool = True,
+    force_reindex: bool = False,
+) -> str:
+    """
+    Index or update markdown directory for semantic search.
+
+    Args:
+        directory: Absolute path to markdown directory
+        recursive: Recursively index subdirectories (default: True)
+        force_reindex: Force full reindex (default: False)
+
+    Returns:
+        JSON with indexing results (processed files, chunks, status)
+    """
+    return await indexer.index_directory(directory, recursive, force_reindex)
+
+
+@mcp.tool()
+async def markdown_search(
+    directory: str,
+    query: str,
+    tags: list[str] | None = None,
+    metadata_filters: dict | None = None,
+    limit: int = 10,
+    threshold: float = 0.5,
+) -> str:
+    """
+    Search markdown documents with semantic similarity and filters.
+
+    Args:
+        directory: Absolute path to indexed markdown directory
+        query: Search query text
+        tags: Filter by tags (e.g., ["#backtest", "#strategy"]) - AND logic
+        metadata_filters: Filter by metadata (e.g., {"sharpe > 1.5": None, "Type": "BACKTEST"})
+        limit: Maximum results to return (default: 10)
+        threshold: Minimum similarity score 0-1 (default: 0.5)
+
+    Returns:
+        JSON with search results (text, filename, path, score, metadata)
+    """
+    return await searcher.search_documents(directory, query, tags, metadata_filters, limit, threshold)
+
+
+@mcp.tool()
+async def markdown_list_indexes() -> str:
+    """
+    List all indexed markdown directories with statistics.
+
+    Returns:
+        JSON with list of indexes (directory, collection, file_count, last_updated)
+    """
+    return await storage.list_all_indexes()
+
+
+@mcp.tool()
+async def markdown_refresh_index(
+    directory: str | None = None,
+    recursive: bool = True,
+) -> str:
+    """
+    Manually force refresh of markdown index.
+
+    Args:
+        directory: Directory to refresh (None = refresh all)
+        recursive: Recursively check subdirectories
+
+    Returns:
+        JSON with refresh results
+    """
+    return await indexer.refresh_index(directory, recursive)
+
+
+@mcp.tool()
+async def markdown_get_tags(directory: str) -> str:
+    """
+    Extract all unique tags from indexed documents with counts.
+
+    Args:
+        directory: Absolute path to indexed directory
+
+    Returns:
+        JSON with tags and counts (e.g., {"#backtest": 42, "#strategy": 38})
+    """
+    return await searcher.get_all_tags(directory)
+
+
+@mcp.tool()
+async def markdown_get_metadata_fields(directory: str) -> str:
+    """
+    List available metadata fields for filtering with examples.
+
+    Args:
+        directory: Absolute path to indexed directory
+
+    Returns:
+        JSON with field names, types, and example values
+    """
+    return await searcher.get_metadata_fields(directory)
+
+
+@mcp.tool()
+async def markdown_drop_index(directory: str) -> str:
+    """
+    Drop index and remove all cached data for a directory.
+
+    Args:
+        directory: Absolute path to directory
+
+    Returns:
+        JSON with status
+    """
+    return await storage.drop_index(directory)
+
+
+@mcp.tool()
+async def markdown_list_knowledges() -> str:
+    """
+    List all registered knowledge bases from ~/.aix/knowledges.yaml.
+
+    Shows which knowledge bases are registered, whether they exist,
+    and whether they have been indexed.
+
+    Returns:
+        JSON with knowledge bases information including paths, descriptions,
+        tags, existence status, and index status
+    """
+    return await registry.list_knowledges()
 
 
 # =============================================================================

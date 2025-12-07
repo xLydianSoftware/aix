@@ -2,72 +2,139 @@
 
 Collection of MCP servers, agents, and extensions for quantitative development/research with Qubx.
 
-## XMCP - Jupyter MCP Server
+## XMCP - Jupyter & Markdown RAG MCP Server
 
-XMCP provides Claude Code with tools to interact with Jupyter notebooks running on JupyterHub or standalone Jupyter Server.
+XMCP provides Claude Code with tools to:
+- Interact with Jupyter notebooks running on JupyterHub or standalone Jupyter Server
+- Search markdown documents using semantic search with tag/metadata filtering
 
-### Features
+**Total Tools: 24** (16 Jupyter + 8 Markdown RAG)
 
-**Notebook Operations:**
-- `jupyter_list_notebooks` - List notebooks in a directory
-- `jupyter_get_notebook_info` - Get notebook metadata and cell summary
-- `jupyter_read_cell` / `jupyter_read_all_cells` - Read cell content
-- `jupyter_append_cell` / `jupyter_insert_cell` - Add new cells
-- `jupyter_update_cell` / `jupyter_delete_cell` - Modify cells
+## Quick Reference
 
-**Kernel Management:**
-- `jupyter_list_kernels` - List running kernels
-- `jupyter_start_kernel` / `jupyter_stop_kernel` - Start/stop kernels
-- `jupyter_restart_kernel` / `jupyter_interrupt_kernel` - Control execution
+### Jupyter Tools (16)
 
-**Code Execution:**
-- `jupyter_execute_code` - Execute code in a kernel
-- `jupyter_connect_notebook` - Connect to notebook's kernel
-- `jupyter_execute_cell` - Execute a specific cell in a notebook
+```python
+# - Notebook operations
+await jupyter_list_notebooks(directory="")
+await jupyter_get_notebook_info(notebook_path)
+await jupyter_read_cell(notebook_path, cell_index)
+await jupyter_read_all_cells(notebook_path)
+await jupyter_append_cell(notebook_path, source, cell_type="code")
+await jupyter_insert_cell(notebook_path, cell_index, source, cell_type="code")
+await jupyter_update_cell(notebook_path, cell_index, source)
+await jupyter_delete_cell(notebook_path, cell_index)
 
-### Installation
+# - Kernel operations
+await jupyter_list_kernels()
+await jupyter_start_kernel(kernel_name="python3")
+await jupyter_stop_kernel(kernel_id)
+await jupyter_restart_kernel(kernel_id)
+await jupyter_interrupt_kernel(kernel_id)
+
+# - Execution
+await jupyter_execute_code(kernel_id, code, timeout=None)
+await jupyter_connect_notebook(notebook_path)
+await jupyter_execute_cell(notebook_path, cell_index, timeout=None)
+```
+
+### Markdown RAG Tools (8)
+
+```python
+# - Indexing
+await markdown_index_directory(directory, recursive=True, force_reindex=False)
+await markdown_refresh_index(directory=None, recursive=True)
+
+# - Searching
+await markdown_search(
+    directory,
+    query,
+    tags=None,
+    metadata_filters=None,
+    limit=10,
+    threshold=0.5
+)
+
+# - Discovery
+await markdown_list_knowledges()  # List registered knowledge bases
+await markdown_list_indexes()     # List indexed directories
+await markdown_get_tags(directory)
+await markdown_get_metadata_fields(directory)
+
+# - Management
+await markdown_drop_index(directory)
+```
+
+## Installation
 
 ```bash
 cd ~/devs/aix
 
-# Install dependencies
-pip install -e .
-
-# Or with poetry
-poetry install
+# - Install dependencies
+uv pip install -e .
 ```
 
-### Configuration
+## Configuration
 
 1. Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
 
-2. Configure your Jupyter Server:
+2. Configure Jupyter Server:
 ```bash
-# Edit .env
+# - Edit .env
 JUPYTER_SERVER_URL=http://localhost:8888
 JUPYTER_API_TOKEN=your-token-here
 ```
 
-3. Get your Jupyter API token:
+3. Configure RAG (optional, defaults provided):
+```bash
+RAG_CACHE_DIR=~/.aix/knowledge
+RAG_CHUNK_SIZE=512
+RAG_CHUNK_OVERLAP=100
+RAG_AUTO_REFRESH=true
+RAG_AUTO_REFRESH_INTERVAL=300
+```
+
+4. Get your Jupyter API token:
    - **JupyterHub**: Admin panel → User → New API Token
    - **Jupyter Server**: `jupyter server list` shows the token
 
-### Register with Claude Code
+## Register with Claude Code
 
 ```bash
-# Add MCP server to Claude Code
-claude mcp add xmcp -- python -m xmcp.server
+# - Add MCP server to Claude Code
+claude mcp add --transport stdio xmcp python -m xmcp.server
 
-# Or with environment variables
-claude mcp add xmcp -e JUPYTER_SERVER_URL=http://localhost:8888 -e JUPYTER_API_TOKEN=your-token -- python -m xmcp.server
+# - Or with environment variables
+claude mcp add -e JUPYTER_SERVER_URL=http://localhost:8888 -e JUPYTER_API_TOKEN=your-token xmcp -- python -m xmcp.server
 ```
 
-### Usage in Claude Code
+## XMCP CLI
 
-Once registered, you can use the tools directly:
+The `xmcp` command provides easy server management:
+
+```bash
+# - Start server
+xmcp start
+
+# - Check status
+xmcp status
+
+# - List all tools
+xmcp ls
+
+# - Restart server (e.g., after adding new tools)
+xmcp restart
+
+# - Stop server
+xmcp stop
+```
+
+## Usage Examples
+
+### Jupyter Notebooks
 
 ```
 > Connect to my notebook and execute the first cell
@@ -75,7 +142,49 @@ Once registered, you can use the tools directly:
 > Execute code: print("Hello from Jupyter!")
 ```
 
-### Transport Modes
+### Markdown Search
+
+```
+> Search my research notes for "mean-reversion strategy entries"
+> Find all ideas tagged with #strategy related to risk management
+> List all backtests with sharpe > 1.5
+```
+
+## After Adding New Tools
+
+**IMPORTANT:** When new tools are added to xmcp, you must restart the MCP server for them to be visible to MCP clients.
+
+### Restart Methods:
+
+**Option 1: Use xmcp CLI** (Recommended)
+```bash
+xmcp restart
+```
+
+**Option 2: Restart Claude Code**
+```bash
+# - Just close and reopen Claude Code
+```
+
+**Option 3: Remove and Re-add MCP Server**
+```bash
+claude mcp remove xmcp -s local
+claude mcp add --transport stdio xmcp python -m xmcp.server
+```
+
+## Verification
+
+```bash
+# - Check server status
+xmcp status
+
+# - List all tools
+xmcp ls
+
+# - Should show: Total Tools: 24
+```
+
+## Transport Modes
 
 **stdio (default)** - For local Claude Code:
 ```bash
@@ -87,15 +196,22 @@ MCP_TRANSPORT=stdio
 MCP_TRANSPORT=http
 MCP_HTTP_PORT=8765
 
-# Then add to Claude Code
+# - Then add to Claude Code
 claude mcp add xmcp --transport http http://your-server:8765
 ```
 
-### Security
+## Security
 
 - Path validation: Only allows access to configured directories
 - Token authentication: Uses Jupyter API tokens
 - Timeout limits: Prevents runaway executions
+
+## Documentation
+
+- **CLI Guide:** See `docs/CLI_GUIDE.md`
+- **Troubleshooting:** See `docs/MCP_TOOLS_TROUBLESHOOTING.md`
+- **RAG Implementation:** See `docs/RAG_IMPLEMENTATION_SUMMARY.md`
+- **Knowledge Registry:** See `docs/KNOWLEDGE_REGISTRY.md`
 
 ## License
 
