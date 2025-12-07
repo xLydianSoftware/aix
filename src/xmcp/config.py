@@ -1,9 +1,12 @@
-"""Configuration for XMCP server."""
+"""
+Configuration for XMCP server.
+"""
 
 import os
 from pathlib import Path
-from pydantic import BaseModel, Field
+
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
 # - Load environment variables
 load_dotenv()
@@ -13,37 +16,26 @@ class JupyterConfig(BaseModel):
     """JupyterHub configuration."""
 
     # - JupyterHub server URL (e.g., http://localhost:8888)
-    server_url: str = Field(
-        default_factory=lambda: os.getenv("JUPYTER_SERVER_URL", "http://localhost:8888")
-    )
+    server_url: str = Field(default_factory=lambda: os.getenv("JUPYTER_SERVER_URL", "http://localhost:8888"))
 
     # - API token for authentication
-    api_token: str = Field(
-        default_factory=lambda: os.getenv("JUPYTER_API_TOKEN", "")
-    )
+    api_token: str = Field(default_factory=lambda: os.getenv("JUPYTER_API_TOKEN", ""))
 
     # - Default notebook directory
-    notebook_dir: Path = Field(
-        default_factory=lambda: Path(os.getenv("JUPYTER_NOTEBOOK_DIR", "~/"))
-    )
+    notebook_dir: Path = Field(default_factory=lambda: Path(os.getenv("JUPYTER_NOTEBOOK_DIR", "~/")))
 
     # - Allowed directories (security - prevent access outside these)
     allowed_dirs: list[Path] = Field(
         default_factory=lambda: [
-            Path(p.strip()).expanduser()
-            for p in os.getenv("JUPYTER_ALLOWED_DIRS", "~/").split(",")
+            Path(p.strip()).expanduser() for p in os.getenv("JUPYTER_ALLOWED_DIRS", "~/").split(",")
         ]
     )
 
     # - WebSocket timeout (seconds)
-    ws_timeout: float = Field(
-        default_factory=lambda: float(os.getenv("JUPYTER_WS_TIMEOUT", "30"))
-    )
+    ws_timeout: float = Field(default_factory=lambda: float(os.getenv("JUPYTER_WS_TIMEOUT", "30")))
 
     # - Execution timeout (seconds)
-    exec_timeout: float = Field(
-        default_factory=lambda: float(os.getenv("JUPYTER_EXEC_TIMEOUT", "300"))
-    )
+    exec_timeout: float = Field(default_factory=lambda: float(os.getenv("JUPYTER_EXEC_TIMEOUT", "300")))
 
 
 class MCPConfig(BaseModel):
@@ -53,19 +45,13 @@ class MCPConfig(BaseModel):
     name: str = "xmcp-jupyter"
 
     # - Transport type: stdio or http
-    transport: str = Field(
-        default_factory=lambda: os.getenv("MCP_TRANSPORT", "stdio")
-    )
+    transport: str = Field(default_factory=lambda: os.getenv("MCP_TRANSPORT", "stdio"))
 
     # - HTTP port (if transport=http)
-    http_port: int = Field(
-        default_factory=lambda: int(os.getenv("MCP_HTTP_PORT", "8765"))
-    )
+    http_port: int = Field(default_factory=lambda: int(os.getenv("MCP_HTTP_PORT", "8765")))
 
     # - Max output tokens
-    max_output_tokens: int = Field(
-        default_factory=lambda: int(os.getenv("MCP_MAX_OUTPUT_TOKENS", "25000"))
-    )
+    max_output_tokens: int = Field(default_factory=lambda: int(os.getenv("MCP_MAX_OUTPUT_TOKENS", "25000")))
 
 
 class Config(BaseModel):

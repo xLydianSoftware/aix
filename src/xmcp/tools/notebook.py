@@ -1,7 +1,8 @@
-"""Notebook operation tools for MCP."""
+"""
+Notebook operation tools for MCP.
+"""
 
 import json
-from pathlib import Path
 
 import nbformat
 

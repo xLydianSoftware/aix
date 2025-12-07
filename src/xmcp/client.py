@@ -1,4 +1,6 @@
-"""JupyterHub/Jupyter Server client for REST API and WebSocket communication."""
+"""
+JupyterHub/Jupyter Server client for REST API and WebSocket communication.
+"""
 
 import asyncio
 import json
