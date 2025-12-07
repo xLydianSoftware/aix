@@ -4,7 +4,7 @@ Data models for RAG functionality.
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class DocumentMetadata(BaseModel):
@@ -12,7 +12,9 @@ class DocumentMetadata(BaseModel):
     Metadata extracted from markdown frontmatter and content.
     """
 
-    tags: list[str] = []
+    model_config = ConfigDict(validate_default=False)
+
+    tags: list[str] | None = None
     created: str | None = None
     author: str | None = None
     type_field: str | None = None
@@ -20,9 +22,14 @@ class DocumentMetadata(BaseModel):
     sharpe: float | None = None
     cagr: float | None = None
     drawdown: float | None = None
-    custom: dict[str, Any] = {}
+    custom: dict[str, Any] | None = None
 
-    model_config = {"validate_assignment": True}
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.tags is None:
+            object.__setattr__(self, 'tags', [])
+        if self.custom is None:
+            object.__setattr__(self, 'custom', {})
 
 
 class DocumentEntity(BaseModel):
@@ -46,8 +53,6 @@ class DocumentEntity(BaseModel):
     # - Full metadata as JSON
     metadata_json: str = "{}"
 
-    model_config = {"validate_assignment": True}
-
 
 class SearchResultItem(BaseModel):
     """Single search result with score and metadata."""
@@ -57,5 +62,3 @@ class SearchResultItem(BaseModel):
     path: str
     score: float
     metadata: DocumentMetadata
-
-    model_config = {"validate_assignment": True}

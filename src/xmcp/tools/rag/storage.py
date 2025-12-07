@@ -4,13 +4,12 @@ Handles Milvus clients, collections, and tracking files.
 """
 
 import json
-import os
 import re
 from pathlib import Path
 
-from pymilvus import MilvusClient
+from pymilvus import MilvusClient  # noqa: E402
 
-from xmcp.config import get_config
+from xmcp.config import get_config  # noqa: E402
 
 # - Global clients cache: {sanitized_dir_name: MilvusClient}
 _clients: dict[str, MilvusClient] = {}

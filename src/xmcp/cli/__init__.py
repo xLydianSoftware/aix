@@ -7,8 +7,12 @@ import signal
 import subprocess
 import sys
 import time
+import warnings
 
 import click
+
+# - Suppress Pydantic warning from llama-index library
+warnings.filterwarnings("ignore", category=Warning, message=".*validate_default.*")
 
 from xmcp.utils import list_server_tools, print_tools_list
 
@@ -187,6 +191,163 @@ def list_alias():
     """List all available MCP tools (alias for ls)."""
     ctx = click.get_current_context()
     ctx.invoke(list_command)
+
+
+@cli.command()
+@click.option('--all', 'reindex_all', is_flag=True, help='Reindex all registered knowledge bases')
+@click.option('--force', is_flag=True, help='Force full reindex (ignore change detection)')
+@click.option('--jobs', '-j', type=int, default=-1, help='Number of parallel jobs (-1 = all CPUs)')
+@click.argument('knowledge', required=False)
+def reindex(knowledge: str | None, reindex_all: bool, force: bool, jobs: int):
+    """
+    Reindex knowledge base(s).
+
+    Examples:
+      xmcp reindex quantlib          Reindex specific knowledge base
+      xmcp reindex --all             Reindex all registered knowledge bases
+      xmcp reindex --all --force     Force full reindex of all
+      xmcp reindex --all -j 4        Reindex with 4 parallel jobs
+    """
+    import asyncio
+    from pathlib import Path
+
+    # - Load knowledge registry
+    knowledges_file = Path.home() / ".aix" / "knowledges.yaml"
+
+    if not knowledges_file.exists():
+        click.echo(f"✗ Knowledge registry not found: {knowledges_file}")
+        click.echo("  Create ~/.aix/knowledges.yaml first")
+        sys.exit(1)
+
+    try:
+        import yaml
+        with open(knowledges_file) as f:
+            data = yaml.safe_load(f)
+
+        if not data or "knowledges" not in data:
+            click.echo("✗ Invalid knowledge registry format")
+            sys.exit(1)
+
+        knowledges = data["knowledges"]
+
+    except Exception as e:
+        click.echo(f"✗ Error loading knowledge registry: {e}")
+        sys.exit(1)
+
+    # - Determine which knowledge bases to reindex
+    to_reindex = []
+
+    if reindex_all:
+        to_reindex = list(knowledges.items())
+    elif knowledge:
+        if knowledge not in knowledges:
+            click.echo(f"✗ Knowledge base '{knowledge}' not found in registry")
+            click.echo(f"\nAvailable: {', '.join(knowledges.keys())}")
+            sys.exit(1)
+        to_reindex = [(knowledge, knowledges[knowledge])]
+    else:
+        click.echo("✗ Please specify a knowledge base or use --all")
+        click.echo(f"\nAvailable: {', '.join(knowledges.keys())}")
+        click.echo("\nExamples:")
+        click.echo("  xmcp reindex quantlib")
+        click.echo("  xmcp reindex --all")
+        sys.exit(1)
+
+    # - Import indexer
+    try:
+        from xmcp.tools.rag import indexer
+    except ImportError as e:
+        click.echo(f"✗ Error importing RAG indexer: {e}")
+        click.echo("  Make sure xmcp is properly installed")
+        sys.exit(1)
+
+    # - Helper function to reindex single knowledge base
+    def reindex_single(name: str, info: dict) -> dict:
+        """Reindex a single knowledge base and return result."""
+        if isinstance(info, dict) and "path" in info:
+            path = Path(info["path"]).expanduser().resolve()
+        else:
+            return {"name": name, "status": "error", "message": "Invalid configuration"}
+
+        if not path.exists():
+            return {"name": name, "status": "error", "message": f"Path does not exist: {path}"}
+
+        try:
+            result = asyncio.run(indexer.index_directory(
+                directory=str(path),
+                recursive=True,
+                force_reindex=force
+            ))
+
+            # - Parse result
+            import json
+            result_data = json.loads(result)
+
+            if result_data.get("status") == "success":
+                stats = result_data.get("stats", {})
+                return {
+                    "name": name,
+                    "status": "success",
+                    "files": stats.get('processed_files', 0),
+                    "chunks": stats.get('total_chunks', 0),
+                    "path": str(path)
+                }
+            else:
+                return {
+                    "name": name,
+                    "status": "error",
+                    "message": result_data.get('message', 'Unknown error')
+                }
+
+        except Exception as e:
+            return {"name": name, "status": "error", "message": str(e)}
+
+    # - Reindex each knowledge base
+    click.echo(f"\n{'='*60}")
+    click.echo(f"Reindexing {len(to_reindex)} knowledge base(s)")
+    if force:
+        click.echo("Mode: Force full reindex")
+    if len(to_reindex) > 1:
+        click.echo(f"Parallel jobs: {jobs if jobs > 0 else 'all CPUs'}")
+    click.echo(f"{'='*60}\n")
+
+    # - Run reindexing (parallel if multiple knowledge bases)
+    if len(to_reindex) > 1:
+        # - Parallel execution
+        from joblib import Parallel, delayed
+
+        results = Parallel(n_jobs=jobs, verbose=0)(
+            delayed(reindex_single)(name, info) for name, info in to_reindex
+        )
+    else:
+        # - Single execution
+        results = [reindex_single(name, info) for name, info in to_reindex]
+
+    # - Display results
+    total_success = 0
+    total_failed = 0
+
+    for result in results:
+        name = result["name"]
+        status = result["status"]
+
+        if status == "success":
+            click.echo(f"✓ {name}: {result['files']} files, {result['chunks']} chunks")
+            click.echo(f"  Path: {result['path']}")
+            total_success += 1
+        else:
+            click.echo(f"✗ {name}: {result.get('message', 'Unknown error')}")
+            total_failed += 1
+
+        click.echo()
+
+    # - Summary
+    click.echo(f"{'='*60}")
+    click.echo(f"Reindex complete: {total_success} success, {total_failed} failed")
+    click.echo(f"{'='*60}\n")
+
+    if total_failed > 0:
+        sys.exit(1)
 
 
 def main():

@@ -6,12 +6,16 @@ Provides Claude Code with tools to interact with Jupyter notebooks.
 
 import asyncio
 import sys
+import warnings
 
-from fastmcp import FastMCP
+# - Suppress Pydantic warning from llama-index library
+warnings.filterwarnings("ignore", category=Warning, message=".*validate_default.*")
 
-from xmcp.config import get_config
-from xmcp.tools.jupyter import kernel, notebook
-from xmcp.tools.rag import indexer, registry, searcher, storage
+from fastmcp import FastMCP  # noqa: E402
+
+from xmcp.config import get_config  # noqa: E402
+from xmcp.tools.jupyter import kernel, notebook  # noqa: E402
+from xmcp.tools.rag import indexer, registry, searcher, storage  # noqa: E402
 
 # - Create MCP server
 config = get_config()

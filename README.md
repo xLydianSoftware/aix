@@ -1,4 +1,4 @@
-# AIX - AI Extensions for Claude Code
+# AIX - AI eXtensions for quantitative development
 
 Collection of MCP servers, agents, and extensions for quantitative development/research with Qubx.
 
@@ -104,12 +104,19 @@ RAG_AUTO_REFRESH_INTERVAL=300
 ## Register with Claude Code
 
 ```bash
-# - Add MCP server to Claude Code
-claude mcp add --transport stdio xmcp python -m xmcp.server
+# - Add MCP server to Claude Code (uses .env configuration)
+claude mcp add --transport stdio xmcp -- python -m xmcp.server
 
-# - Or with environment variables
-claude mcp add -e JUPYTER_SERVER_URL=http://localhost:8888 -e JUPYTER_API_TOKEN=your-token xmcp -- python -m xmcp.server
+# - Or with explicit environment variables
+claude mcp add \
+  -e JUPYTER_SERVER_URL=http://localhost:8888 \
+  -e JUPYTER_API_TOKEN=your-token \
+  --transport stdio \
+  xmcp \
+  -- python -m xmcp.server
 ```
+
+**Note:** The `--` before `python` is required to separate MCP options from the server command.
 
 ## XMCP CLI
 
@@ -124,6 +131,12 @@ xmcp status
 
 # - List all tools
 xmcp ls
+
+# - Reindex knowledge bases
+xmcp reindex quantlib              # Reindex specific knowledge base
+xmcp reindex --all                 # Reindex all (parallel if > 1)
+xmcp reindex --all --force         # Force full reindex
+xmcp reindex --all -j 4            # Use 4 parallel jobs
 
 # - Restart server (e.g., after adding new tools)
 xmcp restart
@@ -208,10 +221,8 @@ claude mcp add xmcp --transport http http://your-server:8765
 
 ## Documentation
 
-- **CLI Guide:** See `docs/CLI_GUIDE.md`
-- **Troubleshooting:** See `docs/MCP_TOOLS_TROUBLESHOOTING.md`
-- **RAG Implementation:** See `docs/RAG_IMPLEMENTATION_SUMMARY.md`
-- **Knowledge Registry:** See `docs/KNOWLEDGE_REGISTRY.md`
+- **[Usage Guide](docs/USAGE.md)** - Installation, configuration, CLI, and usage examples
+- **[Implementation](docs/IMPLEMENTATION.md)** - Technical architecture and design details
 
 ## License
 

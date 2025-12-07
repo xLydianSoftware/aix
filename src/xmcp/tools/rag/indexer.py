@@ -7,15 +7,24 @@ import hashlib
 import json
 import os
 import time
+
+# - Suppress warnings from dependencies
+import warnings
 from pathlib import Path
 
-from llama_index.core import SimpleDirectoryReader
-from llama_index.core.node_parser import MarkdownNodeParser
-from llama_index.core.text_splitter import TokenTextSplitter
+# - Suppress transformers warning (we don't use transformer models)
+os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
+warnings.filterwarnings("ignore", category=Warning, message=".*validate_default.*")
+warnings.filterwarnings("ignore", category=Warning, message=".*pkg_resources.*")
+warnings.filterwarnings("ignore", message=".*PyTorch.*TensorFlow.*Flax.*")
 
-from xmcp.config import get_config, validate_path
-from xmcp.tools.rag import metadata as metadata_module
-from xmcp.tools.rag import storage
+from llama_index.core import SimpleDirectoryReader  # noqa: E402
+from llama_index.core.node_parser import MarkdownNodeParser  # noqa: E402
+from llama_index.core.text_splitter import TokenTextSplitter  # noqa: E402
+
+from xmcp.config import get_config, validate_path  # noqa: E402
+from xmcp.tools.rag import metadata as metadata_module  # noqa: E402
+from xmcp.tools.rag import storage  # noqa: E402
 
 
 def get_file_hash_and_mtime(file_path: str) -> tuple[str, float]:
