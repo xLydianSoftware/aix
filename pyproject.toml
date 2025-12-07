@@ -1,6 +1,6 @@
 [project]
 name = "xmcp"
-version = "1.0.0"
+version = "0.2.0"
 description = "MCP server for JupyterHub/Jupyter/Qubx integration with Claude Code"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
