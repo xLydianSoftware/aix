@@ -1,12 +1,29 @@
 [project]
 name = "xmcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "MCP server for JupyterHub/Jupyter/Qubx integration with Claude Code"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
 keywords = [ "mcp", "jupyter", "jupyterhub", "claude", "anthropic", "ai", "qubx", "notebook",]
 classifiers = [ "Development Status :: 4 - Beta", "Intended Audience :: Developers", "Intended Audience :: Science/Research", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Topic :: Scientific/Engineering", "Topic :: Software Development :: Libraries :: Python Modules",]
-dependencies = [ "fastmcp>=2.13.0", "httpx>=0.25.0", "websockets>=12.0", "nbformat>=5.9.0", "jupyter-client>=8.0.0", "pydantic>=2.0.0", "python-dotenv>=1.0.0", "rust-just (>=1.44.0,<2.0.0)", "ruff (>=0.14.8,<0.15.0)", "uv (>=0.9.16,<0.10.0)", "llama-index>=0.12.45", "pymilvus[model,milvus_lite]>=2.5.11", "python-frontmatter>=1.0.0", "pyyaml>=6.0.0", "click>=8.0.0", "toml (>=0.10.2,<0.11.0)",]
+dependencies = [ 
+    "fastmcp>=2.13.0", 
+    "httpx>=0.25.0", 
+    "websockets>=12.0", 
+    "nbformat>=5.9.0", 
+    "jupyter-client>=8.0.0", 
+    "pydantic>=2.0.0", 
+    "python-dotenv>=1.0.0", 
+    "rust-just (>=1.44.0,<2.0.0)", 
+    "ruff (>=0.14.8,<0.15.0)", 
+    "uv (>=0.9.16,<0.10.0)", 
+    "llama-index>=0.12.45", 
+    "pymilvus[model,milvus_lite]>=2.5.11", 
+    "python-frontmatter>=1.0.0", 
+    "pyyaml>=6.0.0", 
+    "click>=8.0.0", 
+    "toml (>=0.10.2,<0.11.0)",
+]
 [[project.authors]]
 name = "Dmitry Marienko"
 email = "dmitry.ema@gmail.com"

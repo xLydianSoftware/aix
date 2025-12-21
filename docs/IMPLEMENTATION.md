@@ -4,7 +4,7 @@
 
 XMCP is an MCP (Model Context Protocol) server providing Claude Code with 24 tools for:
 - **Jupyter Integration** (16 tools) - Interact with Jupyter notebooks and kernels
-- **Markdown RAG Search** (8 tools) - Semantic search over markdown documents
+- **Knowledge RAG Search** (8 tools) - Semantic search over knowledge files (.md, .py, .ipynb)
 
 ### Technology Stack
 
@@ -47,15 +47,20 @@ tests/xmcp/
 
 ### Document Processing Pipeline
 
-1. **Discovery**: List all `.md` files (recursive)
+1. **Discovery**: List all knowledge files (`.md`, `.py`, `.ipynb`) (recursive)
 2. **Change Detection**: MD5 hash + mtime comparison
-3. **Loading**: LlamaIndex `SimpleDirectoryReader`
-4. **Parsing**: `MarkdownNodeParser` (preserves structure)
+3. **Loading**:
+   - Markdown: LlamaIndex `SimpleDirectoryReader`
+   - Python: Direct text extraction with AST parsing
+   - Jupyter: JSON parsing for cells + outputs
+4. **Parsing**:
+   - Markdown: `MarkdownNodeParser` (preserves structure)
+   - Python/Jupyter: Keep as-is (already structured)
 5. **Chunking**: `TokenTextSplitter` (512 tokens, 100 overlap)
 6. **Metadata Extraction**:
-   - YAML frontmatter parsing (python-frontmatter)
-   - Inline hashtag extraction (regex)
-   - Numeric field parsing (sharpe, cagr, drawdown)
+   - Markdown: YAML frontmatter + inline hashtags
+   - Python: Module docstring, classes, functions, imports (AST)
+   - Jupyter: Kernel spec, cell counts, markdown tags (JSON)
 7. **Embedding**: PyMilvus DefaultEmbeddingFunction (768-dim)
 8. **Storage**: Milvus collection per directory
 9. **Tracking**: JSON file with file hashes and timestamps
@@ -178,20 +183,20 @@ def get_changed_files(directory: str) -> list[str]:
 ### RAG Tools (8)
 
 **Indexing:**
-- `markdown_index_directory` - Index directory with change detection
-- `markdown_refresh_index` - Force refresh of index
+- `knowledge_index_directory` - Index directory with change detection (.md, .py, .ipynb)
+- `knowledge_refresh_index` - Force refresh of index
 
 **Searching:**
-- `markdown_search` - Semantic search with filters
+- `knowledge_search` - Semantic search with filters
 
 **Discovery:**
-- `markdown_list_knowledges` - List registered knowledge bases
-- `markdown_list_indexes` - List indexed directories
-- `markdown_get_tags` - Extract unique tags with counts
-- `markdown_get_metadata_fields` - List filterable fields
+- `knowledge_list_knowledges` - List registered knowledge bases
+- `knowledge_list_indexes` - List indexed directories
+- `knowledge_get_tags` - Extract unique tags with counts
+- `knowledge_get_metadata_fields` - List filterable fields
 
 **Management:**
-- `markdown_drop_index` - Remove index and cache
+- `knowledge_drop_index` - Remove index and cache
 
 ## Configuration System
 

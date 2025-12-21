@@ -68,12 +68,12 @@ def get_collection_name(directory: str) -> str:
     sanitized = sanitize_directory_name(directory)
     # - Replace hyphens with underscores for Milvus compatibility
     sanitized = sanitized.replace("-", "_")
-    return f"markdown_{sanitized}"
+    return f"knowledge_{sanitized}"
 
 
 def get_cache_directory(directory: str) -> Path:
     """
-    Get cache directory path for a markdown directory.
+    Get cache directory path for a knowledge directory.
     """
     config = get_config()
     sanitized = sanitize_directory_name(directory)
@@ -157,7 +157,7 @@ def save_tracking_file(directory: str, data: dict):
 
 async def list_all_indexes() -> str:
     """
-    List all indexed markdown directories with statistics.
+    List all indexed knowledge directories with statistics.
 
     Returns:
         JSON with list of indexes

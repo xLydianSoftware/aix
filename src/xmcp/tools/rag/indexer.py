@@ -3,6 +3,8 @@ Indexing logic for markdown documents.
 Handles change detection, document processing, and auto-refresh.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import os
@@ -25,6 +27,7 @@ from llama_index.core.text_splitter import TokenTextSplitter  # noqa: E402
 from xmcp.config import get_config, validate_path  # noqa: E402
 from xmcp.tools.rag import metadata as metadata_module  # noqa: E402
 from xmcp.tools.rag import storage  # noqa: E402
+from xmcp.tools.rag.models import FileType  # noqa: E402
 
 
 def get_file_hash_and_mtime(file_path: str) -> tuple[str, float]:
@@ -45,18 +48,27 @@ def get_file_hash_and_mtime(file_path: str) -> tuple[str, float]:
     return file_hash, mtime
 
 
-def list_md_files(directory: str, recursive: bool = True) -> list[str]:
+def list_knowledge_files(
+    directory: str, recursive: bool = True, file_types: list[FileType] | None = None
+) -> list[str]:
     """
-    List all markdown files in directory.
+    List all knowledge files in directory.
 
     Args:
         directory: Directory path
         recursive: Recursively search subdirectories
+        file_types: File types to include (default: all supported types)
 
     Returns:
-        List of absolute paths to .md files
+        List of absolute paths to knowledge files (.md, .py, .ipynb)
     """
-    md_files = []
+    if file_types is None:
+        file_types = [FileType.MARKDOWN, FileType.PYTHON, FileType.JUPYTER]
+
+    # - Build set of extensions to match
+    extensions = {f".{ft.value}" for ft in file_types}
+
+    knowledge_files = []
     directory = Path(directory)
 
     if recursive:
@@ -65,19 +77,28 @@ def list_md_files(directory: str, recursive: bool = True) -> list[str]:
             dirs[:] = [d for d in dirs if not d.startswith(".")]
 
             for file in files:
-                if file.endswith(".md") and not file.startswith("."):
-                    md_files.append(str(Path(root) / file))
+                if not file.startswith(".") and any(file.endswith(ext) for ext in extensions):
+                    knowledge_files.append(str(Path(root) / file))
     else:
         for file in directory.iterdir():
-            if file.is_file() and file.suffix == ".md" and not file.name.startswith("."):
-                md_files.append(str(file))
+            if file.is_file() and file.suffix in extensions and not file.name.startswith("."):
+                knowledge_files.append(str(file))
 
-    return md_files
+    return knowledge_files
+
+
+# - Backward compatibility alias (deprecated)
+def list_md_files(directory: str, recursive: bool = True) -> list[str]:
+    """
+    Deprecated: Use list_knowledge_files() instead.
+    List all markdown files in directory.
+    """
+    return list_knowledge_files(directory, recursive, [FileType.MARKDOWN])
 
 
 def get_changed_files(directory: str, recursive: bool = True) -> list[str]:
     """
-    Get list of changed/new markdown files compared to tracking file.
+    Get list of changed/new knowledge files compared to tracking file.
 
     Args:
         directory: Directory path
@@ -90,9 +111,9 @@ def get_changed_files(directory: str, recursive: bool = True) -> list[str]:
     tracked_files = tracking_data.get("files", {})
 
     changed_files = []
-    all_md_files = list_md_files(directory, recursive)
+    all_knowledge_files = list_knowledge_files(directory, recursive)
 
-    for file_path in all_md_files:
+    for file_path in all_knowledge_files:
         if file_path not in tracked_files:
             # - New file
             changed_files.append(file_path)
@@ -137,18 +158,30 @@ def should_auto_refresh(directory: str) -> bool:
     return elapsed >= config.rag.auto_refresh_interval
 
 
-async def index_directory(directory: str, recursive: bool = True, force_reindex: bool = False) -> str:
+async def index_directory(
+    directory: str,
+    recursive: bool = True,
+    force_reindex: bool = False,
+    progress_callback: callable | None = None
+) -> str:
     """
-    Index or update markdown directory.
+    Index or update knowledge directory.
+
+    Supports .md, .py, and .ipynb files.
 
     Args:
-        directory: Absolute path to markdown directory
+        directory: Absolute path to knowledge directory
         recursive: Recursively index subdirectories
         force_reindex: Force full reindex (drop and recreate)
+        progress_callback: Optional callback for progress updates (str) -> None
 
     Returns:
         JSON with indexing results
     """
+    def _report(msg: str):
+        """Report progress if callback provided."""
+        if progress_callback:
+            progress_callback(msg)
     try:
         # - Validate directory path
         validated_dir = validate_path(directory)
@@ -164,21 +197,26 @@ async def index_directory(directory: str, recursive: bool = True, force_reindex:
 
         if force_reindex:
             # - Drop existing collection
+            _report("Dropping existing index...")
             if client.has_collection(collection_name):
                 client.drop_collection(collection_name)
 
             storage.ensure_collection(client, collection_name)
 
-            # - Get all files
-            all_files = list_md_files(directory, recursive)
+            # - Get all knowledge files
+            _report("Discovering files...")
+            all_files = list_knowledge_files(directory, recursive)
             files_to_process = all_files
             mode = "Full reindex"
+            _report(f"Found {len(files_to_process)} files to index")
 
         else:
             # - Incremental update
+            _report("Checking for changes...")
             changed_files = get_changed_files(directory, recursive)
 
             if not changed_files:
+                _report("Already up to date")
                 return json.dumps(
                     {"status": "success", "message": "Already up to date", "processed_files": 0, "total_chunks": 0},
                     indent=2,
@@ -188,6 +226,8 @@ async def index_directory(directory: str, recursive: bool = True, force_reindex:
             storage.ensure_collection(client, collection_name)
 
             # - Delete old chunks for changed files
+            _report(f"Found {len(changed_files)} changed files")
+            _report("Removing old chunks...")
             for file_path in changed_files:
                 try:
                     client.delete(collection_name=collection_name, filter=f'path == "{file_path}"')
@@ -198,8 +238,57 @@ async def index_directory(directory: str, recursive: bool = True, force_reindex:
             files_to_process = changed_files
             mode = "Incremental update"
 
-        # - Load markdown documents
-        documents = SimpleDirectoryReader(input_files=files_to_process, required_exts=[".md"]).load_data()
+        # - Group files by type
+        files_by_type = {FileType.MARKDOWN: [], FileType.PYTHON: [], FileType.JUPYTER: []}
+        for file_path in files_to_process:
+            ext = Path(file_path).suffix.lstrip(".")
+            file_type = FileType.from_extension(ext)
+            if file_type:
+                files_by_type[file_type].append(file_path)
+
+        # - Report file type distribution
+        type_counts = []
+        if files_by_type[FileType.MARKDOWN]:
+            type_counts.append(f"{len(files_by_type[FileType.MARKDOWN])} .md")
+        if files_by_type[FileType.PYTHON]:
+            type_counts.append(f"{len(files_by_type[FileType.PYTHON])} .py")
+        if files_by_type[FileType.JUPYTER]:
+            type_counts.append(f"{len(files_by_type[FileType.JUPYTER])} .ipynb")
+        if type_counts:
+            _report(f"File types: {', '.join(type_counts)}")
+
+        # - Load documents based on file type
+        from llama_index.core import Document
+
+        documents = []
+
+        # - Load markdown files with SimpleDirectoryReader
+        if files_by_type[FileType.MARKDOWN]:
+            _report(f"Loading {len(files_by_type[FileType.MARKDOWN])} markdown files...")
+            md_docs = SimpleDirectoryReader(
+                input_files=files_by_type[FileType.MARKDOWN], required_exts=[".md"]
+            ).load_data()
+            documents.extend(md_docs)
+
+        # - Load Python files (extract full text)
+        if files_by_type[FileType.PYTHON]:
+            _report(f"Loading {len(files_by_type[FileType.PYTHON])} Python files...")
+            for py_file in files_by_type[FileType.PYTHON]:
+                from xmcp.tools.rag.parsers import PythonParser
+
+                text = PythonParser.extract_text(py_file)
+                doc = Document(text=text, metadata={"file_path": py_file, "file_name": Path(py_file).name})
+                documents.append(doc)
+
+        # - Load Jupyter notebooks (extract cells + outputs)
+        if files_by_type[FileType.JUPYTER]:
+            _report(f"Loading {len(files_by_type[FileType.JUPYTER])} Jupyter notebooks...")
+            for nb_file in files_by_type[FileType.JUPYTER]:
+                from xmcp.tools.rag.parsers import JupyterParser
+
+                text = JupyterParser.extract_text(nb_file)
+                doc = Document(text=text, metadata={"file_path": nb_file, "file_name": Path(nb_file).name})
+                documents.append(doc)
 
         if not documents:
             return json.dumps(
@@ -208,6 +297,7 @@ async def index_directory(directory: str, recursive: bool = True, force_reindex:
             )
 
         # - Build file_path -> metadata mapping
+        _report("Extracting metadata...")
         file_metadata = {}
         for file_path in files_to_process:
             try:
@@ -216,10 +306,26 @@ async def index_directory(directory: str, recursive: bool = True, force_reindex:
                 # - Skip files with metadata extraction errors
                 continue
 
-        # - Parse markdown structure
-        nodes = MarkdownNodeParser().get_nodes_from_documents(documents)
+        # - Parse structure (only for markdown, keep Python/Jupyter as-is)
+        _report("Parsing documents...")
+        from llama_index.core.schema import TextNode
+
+        nodes = []
+        for doc in documents:
+            file_path = doc.metadata.get("file_path")
+            ext = Path(file_path).suffix.lstrip(".")
+
+            if ext == "md":
+                # - Use MarkdownNodeParser for markdown
+                parsed = MarkdownNodeParser().get_nodes_from_documents([doc])
+                nodes.extend(parsed)
+            else:
+                # - Keep as-is for Python/Jupyter (already structured)
+                node = TextNode(text=doc.text, metadata=doc.metadata)
+                nodes.append(node)
 
         # - Split into chunks
+        _report(f"Chunking {len(nodes)} nodes...")
         chunked_nodes = TokenTextSplitter(
             chunk_size=config.rag.chunk_size, chunk_overlap=config.rag.chunk_overlap
         ).get_nodes_from_documents(nodes)
@@ -242,9 +348,11 @@ async def index_directory(directory: str, recursive: bool = True, force_reindex:
         texts = [node.text for node in chunked_nodes]
 
         # - Generate embeddings
+        _report(f"Generating embeddings for {len(chunked_nodes)} chunks...")
         vectors = embedding_fn.encode_documents(texts)
 
         # - Build entity dicts
+        _report("Building index entries...")
         data = []
         for vector, node in zip(vectors, chunked_nodes):
             file_path = node.metadata.get("file_path")
@@ -263,9 +371,11 @@ async def index_directory(directory: str, recursive: bool = True, force_reindex:
             data.append(entity_dict)
 
         # - Insert into Milvus
+        _report(f"Inserting {len(data)} chunks into index...")
         insert_result = client.insert(collection_name=collection_name, data=data)
 
         # - Update tracking file
+        _report("Updating tracking file...")
         tracking_data = storage.load_tracking_file(directory)
         tracking_data["last_checked"] = time.time()
 
@@ -283,6 +393,7 @@ async def index_directory(directory: str, recursive: bool = True, force_reindex:
 
         # - Calculate elapsed time
         elapsed_time = time.time() - start_time
+        _report(f"Completed in {elapsed_time:.1f}s")
 
         return json.dumps(
             {

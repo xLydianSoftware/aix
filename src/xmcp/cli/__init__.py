@@ -2,6 +2,7 @@
 XMCP CLI - Command line interface for managing xmcp MCP server.
 """
 
+import json
 import os
 import signal
 import subprocess
@@ -263,44 +264,80 @@ def reindex(knowledge: str | None, reindex_all: bool, force: bool, jobs: int):
 
     # - Helper function to reindex single knowledge base
     def reindex_single(name: str, info: dict) -> dict:
-        """Reindex a single knowledge base and return result."""
-        if isinstance(info, dict) and "path" in info:
-            path = Path(info["path"]).expanduser().resolve()
-        else:
+        """Reindex a single knowledge base (may have multiple paths) and return result."""
+        if not isinstance(info, dict):
             return {"name": name, "status": "error", "message": "Invalid configuration"}
 
-        if not path.exists():
-            return {"name": name, "status": "error", "message": f"Path does not exist: {path}"}
+        # - Support both 'paths' (multiple) and 'path' (single)
+        paths = []
+        if "paths" in info:
+            paths = info["paths"]
+        elif "path" in info:
+            paths = [str(Path(info["path"]).expanduser().resolve())]
+        else:
+            return {"name": name, "status": "error", "message": "No path(s) configured"}
 
-        try:
-            result = asyncio.run(indexer.index_directory(
-                directory=str(path),
-                recursive=True,
-                force_reindex=force
-            ))
-
-            # - Parse result
-            import json
-            result_data = json.loads(result)
-
-            if result_data.get("status") == "success":
-                stats = result_data.get("stats", {})
-                return {
-                    "name": name,
-                    "status": "success",
-                    "files": stats.get('processed_files', 0),
-                    "chunks": stats.get('total_chunks', 0),
-                    "path": str(path)
-                }
+        # - Progress callback (only show for single knowledge base or parallel execution)
+        def progress_callback(msg: str):
+            """Report progress with knowledge base prefix."""
+            if len(to_reindex) == 1:
+                # - Single KB: show progress directly
+                click.echo(f"  {msg}")
             else:
-                return {
-                    "name": name,
-                    "status": "error",
-                    "message": result_data.get('message', 'Unknown error')
-                }
+                # - Multiple KBs: prefix with name (for parallel clarity)
+                click.echo(f"  [{name}] {msg}")
 
-        except Exception as e:
-            return {"name": name, "status": "error", "message": str(e)}
+        # - Reindex each path
+        total_files = 0
+        total_chunks = 0
+        indexed_paths = []
+        errors = []
+
+        for path_str in paths:
+            path = Path(path_str).expanduser().resolve()
+
+            if not path.exists():
+                errors.append(f"Path does not exist: {path}")
+                continue
+
+            try:
+                result = asyncio.run(indexer.index_directory(
+                    directory=str(path),
+                    recursive=True,
+                    force_reindex=force,
+                    progress_callback=progress_callback
+                ))
+
+                # - Parse result
+                result_data = json.loads(result)
+
+                if result_data.get("status") == "success":
+                    # - Extract stats from result
+                    total_files += result_data.get('processed_files', 0)
+                    total_chunks += result_data.get('total_chunks', 0)
+                    indexed_paths.append(str(path))
+                else:
+                    errors.append(f"{path}: {result_data.get('message', 'Unknown error')}")
+
+            except Exception as e:
+                errors.append(f"{path}: {str(e)}")
+
+        # - Return combined result
+        if indexed_paths:
+            return {
+                "name": name,
+                "status": "success" if not errors else "partial",
+                "files": total_files,
+                "chunks": total_chunks,
+                "paths": indexed_paths,
+                "errors": errors if errors else None
+            }
+        else:
+            return {
+                "name": name,
+                "status": "error",
+                "message": "; ".join(errors) if errors else "No paths indexed"
+            }
 
     # - Reindex each knowledge base
     click.echo(f"\n{'='*60}")
@@ -320,7 +357,10 @@ def reindex(knowledge: str | None, reindex_all: bool, force: bool, jobs: int):
             delayed(reindex_single)(name, info) for name, info in to_reindex
         )
     else:
-        # - Single execution
+        # - Single execution - add header
+        name, info = to_reindex[0]
+        click.echo(f"Knowledge base: {name}")
+        click.echo()
         results = [reindex_single(name, info) for name, info in to_reindex]
 
     # - Display results
@@ -331,9 +371,22 @@ def reindex(knowledge: str | None, reindex_all: bool, force: bool, jobs: int):
         name = result["name"]
         status = result["status"]
 
-        if status == "success":
+        if status in ("success", "partial"):
             click.echo(f"✓ {name}: {result['files']} files, {result['chunks']} chunks")
-            click.echo(f"  Path: {result['path']}")
+            paths = result.get('paths', [])
+            if len(paths) == 1:
+                click.echo(f"  Path: {paths[0]}")
+            else:
+                click.echo(f"  Paths ({len(paths)}):")
+                for p in paths:
+                    click.echo(f"    - {p}")
+
+            # - Show errors if partial success
+            if status == "partial" and result.get('errors'):
+                click.echo("  Errors:")
+                for err in result['errors']:
+                    click.echo(f"    - {err}")
+
             total_success += 1
         else:
             click.echo(f"✗ {name}: {result.get('message', 'Unknown error')}")
@@ -347,6 +400,48 @@ def reindex(knowledge: str | None, reindex_all: bool, force: bool, jobs: int):
     click.echo(f"{'='*60}\n")
 
     if total_failed > 0:
+        sys.exit(1)
+
+
+@cli.command()
+def kernels():
+    """
+    List active Jupyter kernels.
+
+    Shows running kernels with their IDs, names, states, and connection counts.
+    """
+    import asyncio
+
+    try:
+        from xmcp.tools.jupyter import kernel
+
+        # - Call async kernel.list_kernels()
+        result_json = asyncio.run(kernel.list_kernels())
+
+        # - Parse result
+        result = json.loads(result_json)
+
+        kernels_list = result.get("kernels", [])
+        count = result.get("count", 0)
+
+        click.echo(f"\n{'='*60}")
+        click.echo(f"Active Jupyter Kernels ({count})")
+        click.echo(f"{'='*60}\n")
+
+        if count == 0:
+            click.echo("No active kernels")
+        else:
+            for k in kernels_list:
+                click.echo(f"Kernel ID:    {k.get('id')}")
+                click.echo(f"Name:         {k.get('name')}")
+                click.echo(f"State:        {k.get('state')}")
+                click.echo(f"Connections:  {k.get('connections')}")
+                click.echo()
+
+        click.echo(f"{'='*60}\n")
+
+    except Exception as e:
+        click.echo(f"✗ Error listing kernels: {e}")
         sys.exit(1)
 
 

@@ -1,15 +1,17 @@
 """
-Metadata extraction from markdown files.
-Handles YAML frontmatter and inline hashtags.
+Metadata extraction from knowledge files.
+Handles YAML frontmatter, inline hashtags, Python AST parsing, and Jupyter notebooks.
 """
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 import frontmatter
 
-from xmcp.tools.rag.models import DocumentEntity, DocumentMetadata
+from xmcp.tools.rag.models import DocumentEntity, DocumentMetadata, FileType
+from xmcp.tools.rag.parsers import JupyterParser, PythonParser
 
 
 def extract_inline_hashtags(text: str) -> list[str]:
@@ -88,6 +90,36 @@ def parse_frontmatter(file_path: str) -> tuple[dict, str]:
 
 def extract_metadata(file_path: str) -> DocumentMetadata:
     """
+    Extract complete metadata from knowledge file.
+
+    Dispatches to file-type-specific parsers:
+    - .md -> Markdown parser (YAML frontmatter + hashtags)
+    - .py -> Python parser (AST + docstrings)
+    - .ipynb -> Jupyter parser (JSON + cells)
+
+    Args:
+        file_path: Path to knowledge file
+
+    Returns:
+        DocumentMetadata with all extracted fields
+    """
+    # - Detect file type from extension
+    ext = Path(file_path).suffix.lstrip(".")
+    file_type = FileType.from_extension(ext)
+
+    if file_type == FileType.PYTHON:
+        return PythonParser.extract_metadata(file_path)
+    elif file_type == FileType.JUPYTER:
+        return JupyterParser.extract_metadata(file_path)
+    elif file_type == FileType.MARKDOWN:
+        return _extract_markdown_metadata(file_path)
+    else:
+        # - Unknown file type
+        return DocumentMetadata()
+
+
+def _extract_markdown_metadata(file_path: str) -> DocumentMetadata:
+    """
     Extract complete metadata from markdown file.
 
     Combines YAML frontmatter and inline hashtags.
@@ -130,6 +162,7 @@ def extract_metadata(file_path: str) -> DocumentMetadata:
 
     # - Build metadata object
     metadata = DocumentMetadata(
+        file_type=FileType.MARKDOWN.value,
         tags=all_tags,
         created=str(fm_data.get("Created") or fm_data.get("created") or ""),
         author=str(fm_data.get("Author") or fm_data.get("author") or ""),

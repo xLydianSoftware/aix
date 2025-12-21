@@ -82,33 +82,35 @@ jupyter server list
 
 ### Knowledge Bases Registry
 
-Create `~/.aix/knowledges.yaml` to register your markdown knowledge bases:
+Create `~/.aix/knowledges.yaml` to register your knowledge bases.
 
+**Single path:**
 ```yaml
 knowledges:
   quantlib:
     path: ~/projects/xfiles/Library
     description: "Quantitative library - books, papers, research articles"
     tags: [library, research, papers]
+```
+
+**Multiple paths (NEW):**
+```yaml
+knowledges:
+  strategies:
+    paths: [~/projects/xfiles/Strategies, ~/projects/xincubator]
+    description: "Trading strategies across multiple repositories"
+    tags: [strategies, trading, research]
 
   backtests:
     path: ~/projects/xfiles/Research/backtests
     description: "Backtest results with performance metrics"
     tags: [backtests, results, performance]
 
-  stochastic:
-    path: ~/projects/xfiles/Studies/Options
-    description: "Stochastic calculus and options pricing theory"
-    tags: [studies, options, mathematics]
-
-  strategies:
-    path: ~/projects/xfiles/Strategies
-    description: "Trading strategies and research"
-    tags: [strategies, trading, research]
-
   research:
-    path: ~/projects/xfiles/Research
-    description: "General research notes and findings"
+    paths:
+      - ~/projects/xfiles/Research
+      - ~/projects/xincubator/research
+    description: "Research notes from multiple projects"
     tags: [research, notes, analysis]
 ```
 
@@ -264,6 +266,33 @@ Reindex complete: 3 success, 0 failed
 ============================================================
 ```
 
+### List Jupyter Kernels
+
+```bash
+xmcp kernels
+```
+
+**Output:**
+```
+============================================================
+Active Jupyter Kernels (2)
+============================================================
+
+Kernel ID:    abc123-def456-ghi789
+Name:         python3
+State:        idle
+Connections:  1
+
+Kernel ID:    xyz789-uvw012-rst345
+Name:         python3
+State:        busy
+Connections:  2
+
+============================================================
+```
+
+Shows all currently running Jupyter kernels with their status and connection information.
+
 ## Using Jupyter Tools
 
 ### List Notebooks
@@ -307,13 +336,13 @@ await jupyter_update_cell(
 )
 ```
 
-## Using Markdown RAG Tools
+## Using Knowledge RAG Tools
 
 ### List Knowledge Bases
 
 ```python
 # - See all registered knowledge bases
-await markdown_list_knowledges()
+await knowledge_list_knowledges()
 ```
 
 **Returns:**
@@ -340,14 +369,14 @@ await markdown_list_knowledges()
 
 ```python
 # - Initial indexing
-await markdown_index_directory(
+await knowledge_index_directory(
     directory="~/projects/xfiles/Library",
     recursive=True,
     force_reindex=False
 )
 
 # - Force full reindex
-await markdown_index_directory(
+await knowledge_index_directory(
     directory="~/projects/xfiles/Library",
     recursive=True,
     force_reindex=True
@@ -358,7 +387,7 @@ await markdown_index_directory(
 
 **Basic search:**
 ```python
-await markdown_search(
+await knowledge_search(
     directory="~/projects/xfiles/Library",
     query="mean-reversion strategy entries",
     limit=10
@@ -367,7 +396,7 @@ await markdown_search(
 
 **With tag filtering:**
 ```python
-await markdown_search(
+await knowledge_search(
     directory="~/projects/xfiles/Research",
     query="strategy entries",
     tags=["#idea", "#strategy"],
@@ -377,7 +406,7 @@ await markdown_search(
 
 **With metadata filtering:**
 ```python
-await markdown_search(
+await knowledge_search(
     directory="~/projects/xfiles/Research/backtests",
     query="backtests",
     metadata_filters={"sharpe > 1.5": None, "Type": "BACKTEST"},
@@ -388,7 +417,7 @@ await markdown_search(
 
 **Combined filters:**
 ```python
-await markdown_search(
+await knowledge_search(
     directory="~/projects/xfiles",
     query="risk management position sizing",
     tags=["#risk-management", "#framework"],
@@ -401,23 +430,23 @@ await markdown_search(
 
 ```python
 # - Get all tags
-await markdown_get_tags("~/projects/xfiles")
+await knowledge_get_tags("~/projects/xfiles")
 
 # - Get filterable metadata fields
-await markdown_get_metadata_fields("~/projects/xfiles")
+await knowledge_get_metadata_fields("~/projects/xfiles")
 ```
 
 ### Manage Indexes
 
 ```python
 # - List all indexed directories
-await markdown_list_indexes()
+await knowledge_list_indexes()
 
 # - Refresh index manually
-await markdown_refresh_index("~/projects/xfiles")
+await knowledge_refresh_index("~/projects/xfiles")
 
 # - Drop index (cleanup)
-await markdown_drop_index("~/projects/xfiles")
+await knowledge_drop_index("~/projects/xfiles")
 ```
 
 ## Common Workflows
@@ -447,22 +476,22 @@ xmcp ls
 
 ```python
 # - 1. List registered knowledge bases
-await markdown_list_knowledges()
+await knowledge_list_knowledges()
 
 # - 2. Index each one
-await markdown_index_directory("~/projects/xfiles/Library", recursive=True)
-await markdown_index_directory("~/projects/xfiles/Research", recursive=True)
-await markdown_index_directory("~/projects/xfiles/Strategies", recursive=True)
+await knowledge_index_directory("~/projects/xfiles/Library", recursive=True)
+await knowledge_index_directory("~/projects/xfiles/Research", recursive=True)
+await knowledge_index_directory("~/projects/xfiles/Strategies", recursive=True)
 
 # - 3. Verify indexing
-await markdown_list_indexes()
+await knowledge_list_indexes()
 ```
 
 ### Daily Usage
 
 ```python
 # - Search across your knowledge
-await markdown_search(
+await knowledge_search(
     directory="~/projects/xfiles",
     query="your research question",
     limit=10
@@ -543,13 +572,13 @@ JUPYTER_ALLOWED_DIRS=~/projects,~/devs,~/research,~/
 **Solutions:**
 ```python
 # - Check if indexed
-await markdown_list_indexes()
+await knowledge_list_indexes()
 
 # - Index directory
-await markdown_index_directory("~/projects/xfiles", recursive=True)
+await knowledge_index_directory("~/projects/xfiles", recursive=True)
 
 # - Lower threshold
-await markdown_search(
+await knowledge_search(
     directory="~/projects/xfiles",
     query="your query",
     threshold=0.3  # Lower threshold
@@ -564,10 +593,10 @@ await markdown_search(
 
 ```python
 # - Manual refresh
-await markdown_refresh_index("~/projects/xfiles", recursive=True)
+await knowledge_refresh_index("~/projects/xfiles", recursive=True)
 
 # - Or force reindex
-await markdown_index_directory(
+await knowledge_index_directory(
     directory="~/projects/xfiles",
     recursive=True,
     force_reindex=True
@@ -624,7 +653,7 @@ claude mcp add xmcp --transport http http://your-server:8765
 
 ```python
 # - Find all research on a topic
-await markdown_search(
+await knowledge_search(
     directory="~/projects/xfiles",
     query="portfolio optimization risk-adjusted returns",
     tags=["#research"],
@@ -649,7 +678,7 @@ await jupyter_execute_cell("~/projects/analysis.ipynb", cell_index=5)
 
 ```python
 # - Find high-performing strategies
-await markdown_search(
+await knowledge_search(
     directory="~/projects/xfiles/Strategies",
     query="mean reversion with volatility targeting",
     metadata_filters={"sharpe > 2.0": None, "Type": "BACKTEST"},
@@ -662,13 +691,13 @@ await markdown_search(
 
 ```python
 # - List all knowledge bases
-result = await markdown_list_knowledges()
+result = await knowledge_list_knowledges()
 
 # - Check which ones are indexed
 # - Index any that aren't
 for name, info in result["knowledges"].items():
     if not info["indexed"] and info["exists"]:
-        await markdown_index_directory(info["path"], recursive=True)
+        await knowledge_index_directory(info["path"], recursive=True)
 ```
 
 ## Getting Help

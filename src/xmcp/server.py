@@ -302,21 +302,23 @@ async def jupyter_execute_cell(
 
 
 # =============================================================================
-# Markdown RAG Tools
+# Knowledge RAG Tools
 # =============================================================================
 
 
 @mcp.tool()
-async def markdown_index_directory(
+async def knowledge_index_directory(
     directory: str,
     recursive: bool = True,
     force_reindex: bool = False,
 ) -> str:
     """
-    Index or update markdown directory for semantic search.
+    Index or update knowledge directory for semantic search.
+
+    Supports: .md (markdown), .py (Python), .ipynb (Jupyter notebooks)
 
     Args:
-        directory: Absolute path to markdown directory
+        directory: Absolute path to knowledge directory
         recursive: Recursively index subdirectories (default: True)
         force_reindex: Force full reindex (default: False)
 
@@ -327,7 +329,7 @@ async def markdown_index_directory(
 
 
 @mcp.tool()
-async def markdown_search(
+async def knowledge_search(
     directory: str,
     query: str,
     tags: list[str] | None = None,
@@ -336,13 +338,15 @@ async def markdown_search(
     threshold: float = 0.5,
 ) -> str:
     """
-    Search markdown documents with semantic similarity and filters.
+    Search knowledge base with semantic similarity and filters.
+
+    Searches across .md, .py, and .ipynb files.
 
     Args:
-        directory: Absolute path to indexed markdown directory
+        directory: Absolute path to indexed knowledge directory
         query: Search query text
         tags: Filter by tags (e.g., ["#backtest", "#strategy"]) - AND logic
-        metadata_filters: Filter by metadata (e.g., {"sharpe > 1.5": None, "Type": "BACKTEST"})
+        metadata_filters: Filter by metadata (e.g., {"sharpe > 1.5": None, "file_type": "py"})
         limit: Maximum results to return (default: 10)
         threshold: Minimum similarity score 0-1 (default: 0.5)
 
@@ -353,9 +357,9 @@ async def markdown_search(
 
 
 @mcp.tool()
-async def markdown_list_indexes() -> str:
+async def knowledge_list_indexes() -> str:
     """
-    List all indexed markdown directories with statistics.
+    List all indexed knowledge directories with statistics.
 
     Returns:
         JSON with list of indexes (directory, collection, file_count, last_updated)
@@ -364,12 +368,12 @@ async def markdown_list_indexes() -> str:
 
 
 @mcp.tool()
-async def markdown_refresh_index(
+async def knowledge_refresh_index(
     directory: str | None = None,
     recursive: bool = True,
 ) -> str:
     """
-    Manually force refresh of markdown index.
+    Manually force refresh of knowledge index.
 
     Args:
         directory: Directory to refresh (None = refresh all)
@@ -382,7 +386,7 @@ async def markdown_refresh_index(
 
 
 @mcp.tool()
-async def markdown_get_tags(directory: str) -> str:
+async def knowledge_get_tags(directory: str) -> str:
     """
     Extract all unique tags from indexed documents with counts.
 
@@ -396,7 +400,7 @@ async def markdown_get_tags(directory: str) -> str:
 
 
 @mcp.tool()
-async def markdown_get_metadata_fields(directory: str) -> str:
+async def knowledge_get_metadata_fields(directory: str) -> str:
     """
     List available metadata fields for filtering with examples.
 
@@ -410,7 +414,7 @@ async def markdown_get_metadata_fields(directory: str) -> str:
 
 
 @mcp.tool()
-async def markdown_drop_index(directory: str) -> str:
+async def knowledge_drop_index(directory: str) -> str:
     """
     Drop index and remove all cached data for a directory.
 
@@ -424,7 +428,7 @@ async def markdown_drop_index(directory: str) -> str:
 
 
 @mcp.tool()
-async def markdown_list_knowledges() -> str:
+async def knowledge_list_knowledges() -> str:
     """
     List all registered knowledge bases from ~/.aix/knowledges.yaml.
 
