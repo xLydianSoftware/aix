@@ -273,22 +273,42 @@ async def index_directory(
         # - Load Python files (extract full text)
         if files_by_type[FileType.PYTHON]:
             _report(f"Loading {len(files_by_type[FileType.PYTHON])} Python files...")
+            skipped_large = 0
             for py_file in files_by_type[FileType.PYTHON]:
+                # - Check file size
+                file_size_mb = Path(py_file).stat().st_size / (1024 * 1024)
+                if file_size_mb > config.rag.max_file_size_mb:
+                    skipped_large += 1
+                    continue
+
                 from xmcp.tools.rag.parsers import PythonParser
 
                 text = PythonParser.extract_text(py_file)
                 doc = Document(text=text, metadata={"file_path": py_file, "file_name": Path(py_file).name})
                 documents.append(doc)
 
+            if skipped_large > 0:
+                _report(f"  Skipped {skipped_large} Python files > {config.rag.max_file_size_mb}MB")
+
         # - Load Jupyter notebooks (extract cells + outputs)
         if files_by_type[FileType.JUPYTER]:
             _report(f"Loading {len(files_by_type[FileType.JUPYTER])} Jupyter notebooks...")
+            skipped_large = 0
             for nb_file in files_by_type[FileType.JUPYTER]:
+                # - Check file size
+                file_size_mb = Path(nb_file).stat().st_size / (1024 * 1024)
+                if file_size_mb > config.rag.max_file_size_mb:
+                    skipped_large += 1
+                    continue
+
                 from xmcp.tools.rag.parsers import JupyterParser
 
-                text = JupyterParser.extract_text(nb_file)
+                text = JupyterParser.extract_text(nb_file, skip_outputs=config.rag.skip_notebook_outputs)
                 doc = Document(text=text, metadata={"file_path": nb_file, "file_name": Path(nb_file).name})
                 documents.append(doc)
+
+            if skipped_large > 0:
+                _report(f"  Skipped {skipped_large} Jupyter notebooks > {config.rag.max_file_size_mb}MB")
 
         if not documents:
             return json.dumps(
@@ -347,9 +367,23 @@ async def index_directory(
         # - Extract text for embedding
         texts = [node.text for node in chunked_nodes]
 
-        # - Generate embeddings
+        # - Generate embeddings with progress
         _report(f"Generating embeddings for {len(chunked_nodes)} chunks...")
-        vectors = embedding_fn.encode_documents(texts)
+
+        # - Batch processing for progress reporting
+        batch_size = 1000
+        vectors = []
+
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i:i + batch_size]
+            batch_vectors = embedding_fn.encode_documents(batch_texts)
+            vectors.extend(batch_vectors)
+
+            # - Report progress every batch
+            processed = min(i + batch_size, len(texts))
+            _report(f"  Embeddings: {processed}/{len(texts)} ({100 * processed // len(texts)}%)")
+
+        _report(f"  Embeddings: {len(texts)}/{len(texts)} (100%) - Complete!")
 
         # - Build entity dicts
         _report("Building index entries...")

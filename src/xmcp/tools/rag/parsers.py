@@ -212,14 +212,14 @@ class JupyterParser:
         return False
 
     @staticmethod
-    def extract_text(file_path: str) -> str:
+    def extract_text(file_path: str, skip_outputs: bool = False) -> str:
         """
         Extract text content from Jupyter notebook.
 
         Includes:
         - Code cells (source)
         - Markdown cells (source)
-        - Text outputs (stdout, text/plain, text/html)
+        - Text outputs (stdout, text/plain, text/html) - unless skip_outputs=True
 
         Excludes:
         - Images (image/png, image/jpeg)
@@ -229,6 +229,7 @@ class JupyterParser:
 
         Args:
             file_path: Path to .ipynb file
+            skip_outputs: If True, only index cell sources (not outputs)
 
         Returns:
             Combined text content from cells and outputs
@@ -254,8 +255,8 @@ class JupyterParser:
             if cell_type in ("code", "markdown") and source.strip():
                 text_parts.append(f"# Cell {idx + 1} ({cell_type}):\n{source}\n")
 
-            # - Extract text outputs from code cells
-            if cell_type == "code":
+            # - Extract text outputs from code cells (unless skip_outputs is True)
+            if cell_type == "code" and not skip_outputs:
                 outputs = cell.get("outputs", [])
                 for output in outputs:
                     output_type = output.get("output_type")

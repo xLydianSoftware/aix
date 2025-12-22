@@ -76,6 +76,8 @@ class RAGConfig(BaseModel):
     auto_refresh_interval: int = get_env_int("RAG_AUTO_REFRESH_INTERVAL", 300)
     default_search_limit: int = get_env_int("RAG_DEFAULT_SEARCH_LIMIT", 10)
     default_similarity_threshold: float = get_env_float("RAG_DEFAULT_SIMILARITY_THRESHOLD", 0.5)
+    max_file_size_mb: int = get_env_int("RAG_MAX_FILE_SIZE_MB", 10)  # Skip files > 10MB
+    skip_notebook_outputs: bool = get_env_bool("RAG_SKIP_NOTEBOOK_OUTPUTS", False)
 
 
 class Config(BaseModel):
