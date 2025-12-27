@@ -4,7 +4,7 @@ version = "0.3.1"
 description = "MCP server for JupyterHub/Jupyter/Qubx integration with Claude Code"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
-keywords = [ "mcp", "jupyter", "jupyterhub", "claude", "anthropic", "ai", "qubx", "notebook",]
+keywords = [ "mcp", "jupyter", "jupyterhub", "claude", "anthropic", "ai", "qubx", "notebook", "xlydian", ]
 classifiers = [ "Development Status :: 4 - Beta", "Intended Audience :: Developers", "Intended Audience :: Science/Research", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Topic :: Scientific/Engineering", "Topic :: Software Development :: Libraries :: Python Modules",]
 dependencies = [ 
     "fastmcp>=2.13.0", 
