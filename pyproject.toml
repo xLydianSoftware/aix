@@ -1,6 +1,6 @@
 [project]
 name = "xlmcp"
-version = "0.3.0"
+version = "0.3.1"
 description = "MCP server for JupyterHub/Jupyter/Qubx integration with Claude Code"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
@@ -39,10 +39,10 @@ text = "MIT"
 dev = [ "pytest>=7.0.0", "pytest-asyncio>=0.21.0", "ruff>=0.1.0",]
 
 [project.urls]
-Homepage = "https://github.com/xlydian/aix"
-Repository = "https://github.com/xlydian/aix"
-Documentation = "https://github.com/xlydian/aix#readme"
-Issues = "https://github.com/xlydian/aix/issues"
+Homepage = "https://github.com/xLydianSoftware/aix"
+Repository = "https://github.com/xLydianSoftware/aix"
+Documentation = "https://github.com/xLydianSoftware/aix#readme"
+Issues = "https://github.com/xLydianSoftware/aix/issues"
 
 [project.scripts]
 xlmcp-server = "xlmcp.server:main"

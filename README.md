@@ -2,9 +2,9 @@
 
 Collection of MCP servers, agents, and extensions for quantitative development/research with Qubx.
 
-## XMCP - Jupyter & Markdown RAG MCP Server
+## XLMCP - Jupyter & Markdown RAG MCP Server
 
-XMCP provides Claude Code with tools to:
+XLMCP provides Claude Code with tools to:
 - Interact with Jupyter notebooks running on JupyterHub or standalone Jupyter Server
 - Search markdown documents using semantic search with tag/metadata filtering
 
@@ -67,6 +67,18 @@ await markdown_drop_index(directory)
 
 ## Installation
 
+### From PyPI (Recommended)
+
+```bash
+# - Install from PyPI
+pip install xlmcp
+
+# - Or using uv
+uv pip install xlmcp
+```
+
+### From Source
+
 ```bash
 cd ~/devs/aix
 
@@ -118,7 +130,7 @@ claude mcp add \
 
 **Note:** The `--` before `python` is required to separate MCP options from the server command.
 
-## XMCP CLI
+## XLMCP CLI
 
 The `xlmcp` command provides easy server management:
 
