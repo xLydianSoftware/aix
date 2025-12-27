@@ -24,10 +24,10 @@ from llama_index.core import SimpleDirectoryReader  # noqa: E402
 from llama_index.core.node_parser import MarkdownNodeParser  # noqa: E402
 from llama_index.core.text_splitter import TokenTextSplitter  # noqa: E402
 
-from xmcp.config import get_config, validate_path  # noqa: E402
-from xmcp.tools.rag import metadata as metadata_module  # noqa: E402
-from xmcp.tools.rag import storage  # noqa: E402
-from xmcp.tools.rag.models import FileType  # noqa: E402
+from xlmcp.config import get_config, validate_path  # noqa: E402
+from xlmcp.tools.rag import metadata as metadata_module  # noqa: E402
+from xlmcp.tools.rag import storage  # noqa: E402
+from xlmcp.tools.rag.models import FileType  # noqa: E402
 
 
 def get_file_hash_and_mtime(file_path: str) -> tuple[str, float]:
@@ -281,7 +281,7 @@ async def index_directory(
                     skipped_large += 1
                     continue
 
-                from xmcp.tools.rag.parsers import PythonParser
+                from xlmcp.tools.rag.parsers import PythonParser
 
                 text = PythonParser.extract_text(py_file)
                 doc = Document(text=text, metadata={"file_path": py_file, "file_name": Path(py_file).name})
@@ -301,7 +301,7 @@ async def index_directory(
                     skipped_large += 1
                     continue
 
-                from xmcp.tools.rag.parsers import JupyterParser
+                from xlmcp.tools.rag.parsers import JupyterParser
 
                 text = JupyterParser.extract_text(nb_file, skip_outputs=config.rag.skip_notebook_outputs)
                 doc = Document(text=text, metadata={"file_path": nb_file, "file_name": Path(nb_file).name})

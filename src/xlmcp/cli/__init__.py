@@ -1,5 +1,5 @@
 """
-XMCP CLI - Command line interface for managing xmcp MCP server.
+XLMCP CLI - Command line interface for managing xlmcp MCP server.
 """
 
 import json
@@ -15,19 +15,19 @@ import click
 # - Suppress Pydantic warning from llama-index library
 warnings.filterwarnings("ignore", category=Warning, message=".*validate_default.*")
 
-from xmcp.utils import list_server_tools, print_tools_list
+from xlmcp.utils import list_server_tools, print_tools_list
 
 
 def get_server_pid() -> int | None:
     """
-    Get PID of running xmcp server process.
+    Get PID of running xlmcp server process.
 
     Returns:
         PID or None if not running
     """
     try:
         result = subprocess.run(
-            ["pgrep", "-f", "xmcp.server"],
+            ["pgrep", "-f", "xlmcp.server"],
             capture_output=True,
             text=True
         )
@@ -39,7 +39,7 @@ def get_server_pid() -> int | None:
 
 
 def is_server_running() -> bool:
-    """Check if xmcp server is running."""
+    """Check if xlmcp server is running."""
     return get_server_pid() is not None
 
 
@@ -47,15 +47,15 @@ def is_server_running() -> bool:
 @click.pass_context
 def cli(ctx):
     """
-    XMCP CLI - Manage xmcp MCP server.
+    XLMCP CLI - Manage xlmcp MCP server.
 
     Examples:
-      xmcp start          Start server in background
-      xmcp stop           Stop server
-      xmcp restart        Restart server
-      xmcp status         Show server status
-      xmcp ls             List available tools
-      xmcp start -f       Start server in foreground
+      xlmcp start          Start server in background
+      xlmcp stop           Stop server
+      xlmcp restart        Restart server
+      xlmcp status         Show server status
+      xlmcp ls             List available tools
+      xlmcp start -f       Start server in foreground
     """
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
@@ -64,22 +64,22 @@ def cli(ctx):
 @cli.command()
 @click.option('-f', '--foreground', is_flag=True, help='Run server in foreground')
 def start(foreground: bool):
-    """Start xmcp MCP server."""
+    """Start xlmcp MCP server."""
     if is_server_running():
-        click.echo("✓ xmcp server is already running")
+        click.echo("✓ xlmcp server is already running")
         click.echo(f"  PID: {get_server_pid()}")
         return
 
-    click.echo("Starting xmcp server...")
+    click.echo("Starting xlmcp server...")
 
     if foreground:
         # - Run in foreground
-        from xmcp.server import main
+        from xlmcp.server import main
         main()
     else:
         # - Run in background
         subprocess.Popen(
-            [sys.executable, "-m", "xmcp.server"],
+            [sys.executable, "-m", "xlmcp.server"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True
@@ -87,23 +87,23 @@ def start(foreground: bool):
         time.sleep(1)  # Give it time to start
 
         if is_server_running():
-            click.echo("✓ xmcp server started")
+            click.echo("✓ xlmcp server started")
             click.echo(f"  PID: {get_server_pid()}")
         else:
-            click.echo("✗ Failed to start xmcp server")
+            click.echo("✗ Failed to start xlmcp server")
             sys.exit(1)
 
 
 @cli.command()
 def stop():
-    """Stop xmcp MCP server."""
+    """Stop xlmcp MCP server."""
     pid = get_server_pid()
 
     if pid is None:
-        click.echo("✓ xmcp server is not running")
+        click.echo("✓ xlmcp server is not running")
         return
 
-    click.echo(f"Stopping xmcp server (PID: {pid})...")
+    click.echo(f"Stopping xlmcp server (PID: {pid})...")
 
     try:
         os.kill(pid, signal.SIGTERM)
@@ -111,18 +111,18 @@ def stop():
 
         # - Check if stopped
         if not is_server_running():
-            click.echo("✓ xmcp server stopped")
+            click.echo("✓ xlmcp server stopped")
         else:
             click.echo("✗ Server did not stop gracefully, forcing...")
             os.kill(pid, signal.SIGKILL)
             time.sleep(0.5)
             if not is_server_running():
-                click.echo("✓ xmcp server killed")
+                click.echo("✓ xlmcp server killed")
             else:
                 click.echo("✗ Failed to stop server")
                 sys.exit(1)
     except ProcessLookupError:
-        click.echo("✓ xmcp server stopped")
+        click.echo("✓ xlmcp server stopped")
     except Exception as e:
         click.echo(f"✗ Error stopping server: {e}")
         sys.exit(1)
@@ -130,8 +130,8 @@ def stop():
 
 @cli.command()
 def restart():
-    """Restart xmcp MCP server."""
-    click.echo("Restarting xmcp server...\n")
+    """Restart xlmcp MCP server."""
+    click.echo("Restarting xlmcp server...\n")
     ctx = click.get_current_context()
     ctx.invoke(stop)
     time.sleep(0.5)
@@ -140,11 +140,11 @@ def restart():
 
 @cli.command()
 def status():
-    """Show xmcp server status."""
+    """Show xlmcp server status."""
     pid = get_server_pid()
 
     click.echo(f"\n{'='*60}")
-    click.echo("XMCP Server Status")
+    click.echo("XLMCP Server Status")
     click.echo(f"{'='*60}\n")
 
     if pid:
@@ -182,7 +182,7 @@ def list_command():
         print_tools_list(tools)
     except Exception as e:
         click.echo(f"✗ Error listing tools: {e}")
-        click.echo("  Make sure xmcp is properly installed")
+        click.echo("  Make sure xlmcp is properly installed")
         sys.exit(1)
 
 
@@ -204,10 +204,10 @@ def reindex(knowledge: str | None, reindex_all: bool, force: bool, jobs: int):
     Reindex knowledge base(s).
 
     Examples:
-      xmcp reindex quantlib          Reindex specific knowledge base
-      xmcp reindex --all             Reindex all registered knowledge bases
-      xmcp reindex --all --force     Force full reindex of all
-      xmcp reindex --all -j 4        Reindex with 4 parallel jobs
+      xlmcp reindex quantlib          Reindex specific knowledge base
+      xlmcp reindex --all             Reindex all registered knowledge bases
+      xlmcp reindex --all --force     Force full reindex of all
+      xlmcp reindex --all -j 4        Reindex with 4 parallel jobs
     """
     import asyncio
     from pathlib import Path
@@ -250,16 +250,16 @@ def reindex(knowledge: str | None, reindex_all: bool, force: bool, jobs: int):
         click.echo("✗ Please specify a knowledge base or use --all")
         click.echo(f"\nAvailable: {', '.join(knowledges.keys())}")
         click.echo("\nExamples:")
-        click.echo("  xmcp reindex quantlib")
-        click.echo("  xmcp reindex --all")
+        click.echo("  xlmcp reindex quantlib")
+        click.echo("  xlmcp reindex --all")
         sys.exit(1)
 
     # - Import indexer
     try:
-        from xmcp.tools.rag import indexer
+        from xlmcp.tools.rag import indexer
     except ImportError as e:
         click.echo(f"✗ Error importing RAG indexer: {e}")
-        click.echo("  Make sure xmcp is properly installed")
+        click.echo("  Make sure xlmcp is properly installed")
         sys.exit(1)
 
     # - Helper function to reindex single knowledge base
@@ -413,7 +413,7 @@ def kernels():
     import asyncio
 
     try:
-        from xmcp.tools.jupyter import kernel
+        from xlmcp.tools.jupyter import kernel
 
         # - Call async kernel.list_kernels()
         result_json = asyncio.run(kernel.list_kernels())

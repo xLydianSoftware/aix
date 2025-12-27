@@ -1,5 +1,5 @@
 """
-XMCP Server - MCP Server for JupyterHub Integration
+XLMCP Server - MCP Server for JupyterHub Integration
 
 Provides Claude Code with tools to interact with Jupyter notebooks.
 """
@@ -13,9 +13,9 @@ warnings.filterwarnings("ignore", category=Warning, message=".*validate_default.
 
 from fastmcp import FastMCP  # noqa: E402
 
-from xmcp.config import get_config  # noqa: E402
-from xmcp.tools.jupyter import kernel, notebook  # noqa: E402
-from xmcp.tools.rag import indexer, registry, searcher, storage  # noqa: E402
+from xlmcp.config import get_config  # noqa: E402
+from xlmcp.tools.jupyter import kernel, notebook  # noqa: E402
+from xlmcp.tools.rag import indexer, registry, searcher, storage  # noqa: E402
 
 # - Create MCP server
 config = get_config()

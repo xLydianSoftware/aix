@@ -10,15 +10,15 @@ test:
 
 # - Run tests with coverage
 test-cov:
-	pytest tests -v --cov=src/xmcp --cov-report=term --cov-report=html
+	pytest tests -v --cov=src/xlmcp --cov-report=term --cov-report=html
 
 # - Lint code with ruff
 lint:
-	ruff check src/xmcp
+	ruff check src/xlmcp
 
 # - Format code with ruff
 fmt:
-	ruff format src/xmcp
+	ruff format src/xlmcp
 
 # - Build package
 build:
@@ -59,11 +59,14 @@ update-version part="patch":
 	echo "✓ Version updated: $current → $new_version"
 
 # - Publish to PyPI (requires main branch)
-publish: build test
-	@if [ "$$(git symbolic-ref --short -q HEAD)" = "main" ]; then \
-		twine upload dist/*; \
-	else \
-		echo ">>> Not in main branch!"; \
+publish: build
+	#!/usr/bin/env bash
+	set -euo pipefail
+	if [ "$(git symbolic-ref --short -q HEAD)" = "main" ]; then
+		twine upload dist/*
+	else
+		echo ">>> Not in main branch!"
+		exit 1
 	fi
 
 # - Publish to PyPI without branch check (dev)
@@ -76,11 +79,11 @@ test-publish: build
 
 # - Register MCP server with Claude Code
 mcp-register:
-	claude mcp add xmcp -- python -m xmcp.server
+	claude mcp add xlmcp -- python -m xlmcp.server
 
 # - Unregister MCP server
 mcp-unregister:
-	claude mcp remove xmcp
+	claude mcp remove xlmcp
 
 # - Check MCP server status
 mcp-status:

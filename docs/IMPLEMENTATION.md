@@ -1,8 +1,8 @@
-# XMCP Implementation Overview
+# XLMCP Implementation Overview
 
 ## Architecture
 
-XMCP is an MCP (Model Context Protocol) server providing Claude Code with 24 tools for:
+XLMCP is an MCP (Model Context Protocol) server providing Claude Code with 24 tools for:
 - **Jupyter Integration** (16 tools) - Interact with Jupyter notebooks and kernels
 - **Knowledge RAG Search** (8 tools) - Semantic search over knowledge files (.md, .py, .ipynb)
 
@@ -18,7 +18,7 @@ XMCP is an MCP (Model Context Protocol) server providing Claude Code with 24 too
 ## Module Structure
 
 ```
-src/xmcp/
+src/xlmcp/
 ├── cli/
 │   └── __init__.py           # Click-based CLI (start/stop/status/ls)
 ├── tools/
@@ -37,7 +37,7 @@ src/xmcp/
 ├── server.py                 # MCP server with tool registration
 └── utils.py                  # Utility functions
 
-tests/xmcp/
+tests/xlmcp/
 ├── test_rag_indexing.py      # Indexing tests
 ├── test_rag_metadata.py      # Metadata extraction tests
 └── test_rag_search.py        # Search tests
@@ -243,14 +243,14 @@ knowledges:
 **Framework:** Click (decorator-based)
 
 **Commands:**
-- `xmcp start [-f]` - Start server (background/foreground)
-- `xmcp stop` - Stop server (SIGTERM → SIGKILL)
-- `xmcp restart` - Restart server
-- `xmcp status` - Show PID, uptime, status
-- `xmcp ls` - List all 24 tools
+- `xlmcp start [-f]` - Start server (background/foreground)
+- `xlmcp stop` - Stop server (SIGTERM → SIGKILL)
+- `xlmcp restart` - Restart server
+- `xlmcp status` - Show PID, uptime, status
+- `xlmcp ls` - List all 24 tools
 
 **Process Management:**
-- PID detection: `pgrep -f "xmcp.server"`
+- PID detection: `pgrep -f "xlmcp.server"`
 - Background launch: `subprocess.Popen(..., start_new_session=True)`
 - Graceful shutdown with fallback kill
 

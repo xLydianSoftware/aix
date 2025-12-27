@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pymilvus import MilvusClient  # noqa: E402
 
-from xmcp.config import get_config  # noqa: E402
+from xlmcp.config import get_config  # noqa: E402
 
 # - Global clients cache: {sanitized_dir_name: MilvusClient}
 _clients: dict[str, MilvusClient] = {}

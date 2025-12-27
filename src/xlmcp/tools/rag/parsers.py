@@ -7,7 +7,7 @@ import json
 import re
 from pathlib import Path
 
-from xmcp.tools.rag.models import DocumentMetadata, FileType
+from xlmcp.tools.rag.models import DocumentMetadata, FileType
 
 
 class PythonParser:

@@ -1,9 +1,8 @@
 """
-Utility functions for xmcp.
+Utility functions for xlmcp.
 """
 
 import inspect
-import sys
 
 
 def list_server_tools() -> list[dict]:
@@ -13,7 +12,7 @@ def list_server_tools() -> list[dict]:
     Returns:
         List of dicts with tool name and description
     """
-    from xmcp.server import mcp
+    from xlmcp.server import mcp
 
     tools = []
 
@@ -30,7 +29,7 @@ def list_server_tools() -> list[dict]:
             })
     else:
         # - Alternative: scan server module for decorated functions
-        from xmcp import server
+        from xlmcp import server
 
         for name, obj in inspect.getmembers(server):
             if inspect.iscoroutinefunction(obj) and not name.startswith('_'):
@@ -53,7 +52,7 @@ def print_tools_list(tools: list[dict]):
         tools: List of tool dicts from list_server_tools()
     """
     print(f"\n{'='*80}")
-    print(f"XMCP Server Tools")
+    print("XLMCP Server Tools")
     print(f"{'='*80}\n")
     print(f"Total Tools: {len(tools)}\n")
 

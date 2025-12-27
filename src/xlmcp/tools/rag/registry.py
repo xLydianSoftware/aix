@@ -94,7 +94,7 @@ async def list_knowledges() -> str:
         )
 
     # - Check which ones exist and are indexed
-    from xmcp.tools.rag import storage
+    from xlmcp.tools.rag import storage
 
     result = {}
     for name, info in knowledges.items():

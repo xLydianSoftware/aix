@@ -10,8 +10,8 @@ from typing import Any
 
 import frontmatter
 
-from xmcp.tools.rag.models import DocumentEntity, DocumentMetadata, FileType
-from xmcp.tools.rag.parsers import JupyterParser, PythonParser
+from xlmcp.tools.rag.models import DocumentEntity, DocumentMetadata, FileType
+from xlmcp.tools.rag.parsers import JupyterParser, PythonParser
 
 
 def extract_inline_hashtags(text: str) -> list[str]:

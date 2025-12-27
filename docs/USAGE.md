@@ -1,4 +1,4 @@
-# XMCP Usage Guide
+# XLMCP Usage Guide
 
 ## Installation
 
@@ -8,7 +8,7 @@
 - Jupyter Server or JupyterHub (for Jupyter tools)
 - Claude Code (for MCP integration)
 
-### Install XMCP
+### Install XLMCP
 
 ```bash
 cd ~/devs/aix
@@ -21,18 +21,18 @@ pip install -e .
 ```
 
 This installs:
-- `xmcp` - CLI for server management
-- `xmcp-server` - MCP server executable
+- `xlmcp` - CLI for server management
+- `xlmcp-server` - MCP server executable
 - All 24 MCP tools (16 Jupyter + 8 Markdown RAG)
 
 ### Verify Installation
 
 ```bash
 # - Check CLI is available
-xmcp --help
+xlmcp --help
 
 # - List all tools
-xmcp ls
+xlmcp ls
 
 # - Should show: Total Tools: 24
 ```
@@ -126,15 +126,15 @@ knowledges:
 
 ```bash
 # - Basic registration (uses .env configuration)
-claude mcp add --transport stdio xmcp -- python -m xmcp.server
+claude mcp add --transport stdio xlmcp -- python -m xlmcp.server
 
 # - Or with explicit environment variables
 claude mcp add \
   -e JUPYTER_SERVER_URL=http://127.0.0.1:51421/user/quant0 \
   -e JUPYTER_API_TOKEN=your-token-here \
   --transport stdio \
-  xmcp \
-  -- python -m xmcp.server
+  xlmcp \
+  -- python -m xlmcp.server
 ```
 
 **Note:** The `--` is important - it separates the MCP server name from the command.
@@ -152,13 +152,13 @@ just mcp-register
 claude mcp list
 
 # - Should show:
-# xmcp: python -m xmcp.server
+# xlmcp: python -m xlmcp.server
 
 # - Check server status
-xmcp status
+xlmcp status
 
 # - List tools
-xmcp ls
+xlmcp ls
 ```
 
 ## CLI Commands
@@ -167,28 +167,28 @@ xmcp ls
 
 ```bash
 # - Start in background (default)
-xmcp start
+xlmcp start
 
 # - Start in foreground (see logs)
-xmcp start -f
+xlmcp start -f
 ```
 
 ### Check Status
 
 ```bash
-xmcp status
+xlmcp status
 ```
 
 **Output:**
 ```
 ============================================================
-XMCP Server Status
+XLMCP Server Status
 ============================================================
 
 Status:  ✓ Running
 PID:     12345
 Uptime:  01:23:45
-Command: python -m xmcp.server
+Command: python -m xlmcp.server
 
 ============================================================
 ```
@@ -196,7 +196,7 @@ Command: python -m xmcp.server
 ### List Tools
 
 ```bash
-xmcp ls
+xlmcp ls
 ```
 
 Shows all 24 tools with descriptions.
@@ -205,33 +205,33 @@ Shows all 24 tools with descriptions.
 
 ```bash
 # - Restart to pick up code changes or new tools
-xmcp restart
+xlmcp restart
 ```
 
 ### Stop Server
 
 ```bash
-xmcp stop
+xlmcp stop
 ```
 
 ### Reindex Knowledge Bases
 
 ```bash
 # - Reindex specific knowledge base
-xmcp reindex quantlib
+xlmcp reindex quantlib
 
 # - Reindex all registered knowledge bases (runs in parallel)
-xmcp reindex --all
+xlmcp reindex --all
 
 # - Force full reindex (ignores change detection)
-xmcp reindex --all --force
+xlmcp reindex --all --force
 
 # - Control parallel jobs (default: -1 = all CPUs)
-xmcp reindex --all -j 4            # Use 4 parallel jobs
-xmcp reindex --all -j 1            # Sequential execution
+xlmcp reindex --all -j 4            # Use 4 parallel jobs
+xlmcp reindex --all -j 1            # Sequential execution
 
 # - Get help
-xmcp reindex --help
+xlmcp reindex --help
 ```
 
 **Options:**
@@ -269,7 +269,7 @@ Reindex complete: 3 success, 0 failed
 ### List Jupyter Kernels
 
 ```bash
-xmcp kernels
+xlmcp kernels
 ```
 
 **Output:**
@@ -454,7 +454,7 @@ await knowledge_drop_index("~/projects/xfiles")
 ### Initial Setup
 
 ```bash
-# - 1. Install xmcp
+# - 1. Install xlmcp
 cd ~/devs/aix && uv pip install -e .
 
 # - 2. Configure .env
@@ -465,11 +465,11 @@ vim .env  # Add Jupyter URL and token
 vim ~/.aix/knowledges.yaml
 
 # - 4. Register with Claude Code
-claude mcp add --transport stdio xmcp -- python -m xmcp.server
+claude mcp add --transport stdio xlmcp -- python -m xlmcp.server
 
 # - 5. Verify
-xmcp status
-xmcp ls
+xlmcp status
+xlmcp ls
 ```
 
 ### Indexing Knowledge Bases
@@ -514,14 +514,14 @@ await jupyter_execute_cell("~/projects/analysis.ipynb", 0)
 
 ```bash
 # - Method 1: Use CLI (recommended)
-xmcp restart
+xlmcp restart
 
 # - Method 2: Restart Claude Code
 # Close and reopen Claude Code
 
 # - Method 3: Re-register
-claude mcp remove xmcp
-claude mcp add --transport stdio xmcp -- python -m xmcp.server
+claude mcp remove xlmcp
+claude mcp add --transport stdio xlmcp -- python -m xlmcp.server
 ```
 
 ### Module Not Found Errors
@@ -543,10 +543,10 @@ uv pip install -e .
 
 ```bash
 # - Run in foreground to see errors
-xmcp start -f
+xlmcp start -f
 
 # - Or check manually
-python -m xmcp.server
+python -m xlmcp.server
 ```
 
 ### Permission Errors
@@ -635,7 +635,7 @@ MCP_TRANSPORT=http
 MCP_HTTP_PORT=8765
 
 # - Register with Claude Code
-claude mcp add xmcp --transport http http://your-server:8765
+claude mcp add xlmcp --transport http http://your-server:8765
 ```
 
 ## Best Practices
@@ -702,8 +702,8 @@ for name, info in result["knowledges"].items():
 
 ## Getting Help
 
-- **CLI Help**: `xmcp --help`
-- **Tool Listing**: `xmcp ls`
-- **Server Status**: `xmcp status`
+- **CLI Help**: `xlmcp --help`
+- **Tool Listing**: `xlmcp ls`
+- **Server Status**: `xlmcp status`
 - **Documentation**: See `docs/IMPLEMENTATION.md` for technical details
 - **GitHub Issues**: https://github.com/xlydian/aix/issues

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from xmcp.tools.rag import indexer, searcher
+from xlmcp.tools.rag import indexer, searcher
 
 # - Test data directory
 TEST_DATA_DIR = str(Path(__file__).parent.parent / "data" / "knowledge1")

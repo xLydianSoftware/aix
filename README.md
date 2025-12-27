@@ -105,44 +105,44 @@ RAG_AUTO_REFRESH_INTERVAL=300
 
 ```bash
 # - Add MCP server to Claude Code (uses .env configuration)
-claude mcp add --transport stdio xmcp -- python -m xmcp.server
+claude mcp add --transport stdio xlmcp -- python -m xlmcp.server
 
 # - Or with explicit environment variables
 claude mcp add \
   -e JUPYTER_SERVER_URL=http://localhost:8888 \
   -e JUPYTER_API_TOKEN=your-token \
   --transport stdio \
-  xmcp \
-  -- python -m xmcp.server
+  xlmcp \
+  -- python -m xlmcp.server
 ```
 
 **Note:** The `--` before `python` is required to separate MCP options from the server command.
 
 ## XMCP CLI
 
-The `xmcp` command provides easy server management:
+The `xlmcp` command provides easy server management:
 
 ```bash
 # - Start server
-xmcp start
+xlmcp start
 
 # - Check status
-xmcp status
+xlmcp status
 
 # - List all tools
-xmcp ls
+xlmcp ls
 
 # - Reindex knowledge bases
-xmcp reindex quantlib              # Reindex specific knowledge base
-xmcp reindex --all                 # Reindex all (parallel if > 1)
-xmcp reindex --all --force         # Force full reindex
-xmcp reindex --all -j 4            # Use 4 parallel jobs
+xlmcp reindex quantlib              # Reindex specific knowledge base
+xlmcp reindex --all                 # Reindex all (parallel if > 1)
+xlmcp reindex --all --force         # Force full reindex
+xlmcp reindex --all -j 4            # Use 4 parallel jobs
 
 # - Restart server (e.g., after adding new tools)
-xmcp restart
+xlmcp restart
 
 # - Stop server
-xmcp stop
+xlmcp stop
 ```
 
 ## Usage Examples
@@ -165,13 +165,13 @@ xmcp stop
 
 ## After Adding New Tools
 
-**IMPORTANT:** When new tools are added to xmcp, you must restart the MCP server for them to be visible to MCP clients.
+**IMPORTANT:** When new tools are added to xlmcp, you must restart the MCP server for them to be visible to MCP clients.
 
 ### Restart Methods:
 
-**Option 1: Use xmcp CLI** (Recommended)
+**Option 1: Use xlmcp CLI** (Recommended)
 ```bash
-xmcp restart
+xlmcp restart
 ```
 
 **Option 2: Restart Claude Code**
@@ -181,18 +181,18 @@ xmcp restart
 
 **Option 3: Remove and Re-add MCP Server**
 ```bash
-claude mcp remove xmcp -s local
-claude mcp add --transport stdio xmcp python -m xmcp.server
+claude mcp remove xlmcp -s local
+claude mcp add --transport stdio xlmcp python -m xlmcp.server
 ```
 
 ## Verification
 
 ```bash
 # - Check server status
-xmcp status
+xlmcp status
 
 # - List all tools
-xmcp ls
+xlmcp ls
 
 # - Should show: Total Tools: 24
 ```
@@ -210,7 +210,7 @@ MCP_TRANSPORT=http
 MCP_HTTP_PORT=8765
 
 # - Then add to Claude Code
-claude mcp add xmcp --transport http http://your-server:8765
+claude mcp add xlmcp --transport http http://your-server:8765
 ```
 
 ## Security

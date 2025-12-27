@@ -1,5 +1,5 @@
 """
-Configuration for XMCP server.
+Configuration for XLMCP server.
 """
 
 import os
@@ -58,7 +58,7 @@ class JupyterConfig(BaseModel):
 class MCPConfig(BaseModel):
     """MCP server configuration."""
 
-    name: str = "xmcp-jupyter"
+    name: str = "xlmcp-jupyter"
     transport: str = get_env_str("MCP_TRANSPORT", "stdio")
     http_port: int = get_env_int("MCP_HTTP_PORT", 8765)
     max_output_tokens: int = get_env_int("MCP_MAX_OUTPUT_TOKENS", 25000)

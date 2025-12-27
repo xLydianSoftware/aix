@@ -5,9 +5,9 @@ Handles filter building, search execution, and tag/field extraction.
 
 import json
 
-from xmcp.config import get_config, validate_path
-from xmcp.tools.rag import indexer, storage
-from xmcp.tools.rag.models import DocumentMetadata, SearchResultItem
+from xlmcp.config import get_config, validate_path
+from xlmcp.tools.rag import indexer, storage
+from xlmcp.tools.rag.models import DocumentMetadata, SearchResultItem
 
 
 def build_tag_filter(tags: list[str]) -> str:

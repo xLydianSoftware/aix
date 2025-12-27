@@ -1,5 +1,5 @@
 [project]
-name = "xmcp"
+name = "xlmcp"
 version = "0.3.0"
 description = "MCP server for JupyterHub/Jupyter/Qubx integration with Claude Code"
 readme = "README.md"
@@ -45,12 +45,13 @@ Documentation = "https://github.com/xlydian/aix#readme"
 Issues = "https://github.com/xlydian/aix/issues"
 
 [project.scripts]
-xmcp-server = "xmcp.server:main"
-xmcp = "xmcp.cli:main"
+xlmcp-server = "xlmcp.server:main"
+xlmcp = "xlmcp.cli:main"
 
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+src = ["src"]
 
 [tool.ruff.lint]
 select = [ "E", "F", "I", "W",]
@@ -61,4 +62,4 @@ asyncio_mode = "auto"
 testpaths = [ "tests",]
 
 [tool.hatch.build.targets.wheel]
-packages = [ "src/xmcp",]
+packages = [ "src/xlmcp",]

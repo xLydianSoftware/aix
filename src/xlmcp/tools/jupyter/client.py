@@ -13,7 +13,7 @@ import httpx
 import websockets
 from websockets.exceptions import ConnectionClosed
 
-from xmcp.config import get_config, validate_path
+from xlmcp.config import get_config, validate_path
 
 
 class JupyterClient:
@@ -169,7 +169,7 @@ class JupyterClient:
             "header": {
                 "msg_id": msg_id,
                 "msg_type": "execute_request",
-                "username": "xmcp",
+                "username": "xlmcp",
                 "session": str(uuid.uuid4()),
                 "date": datetime.utcnow().isoformat(),
                 "version": "5.3",

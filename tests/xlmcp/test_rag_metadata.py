@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from xmcp.tools.rag import metadata
+from xlmcp.tools.rag import metadata
 
 # - Test data directory
 TEST_DATA_DIR = Path(__file__).parent.parent / "data" / "knowledge1"

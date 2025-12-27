@@ -94,7 +94,7 @@ RAG_SKIP_NOTEBOOK_OUTPUTS=true
 1. **Stop current reindex** (if still running):
    ```bash
    # Find process
-   ps aux | grep "xmcp reindex"
+   ps aux | grep "xlmcp reindex"
 
    # Kill it
    kill <PID>
@@ -113,7 +113,7 @@ RAG_SKIP_NOTEBOOK_OUTPUTS=true
 
 4. **Reindex with new settings**:
    ```bash
-   xmcp reindex xincubator --force
+   xlmcp reindex xincubator --force
    ```
 
 5. **Monitor progress**:
