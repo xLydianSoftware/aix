@@ -127,13 +127,79 @@ MCP_MAX_OUTPUT_TOKENS=25000
    - **JupyterHub**: Admin panel → User → New API Token
    - **Jupyter Server**: `jupyter server list` shows the token
 
-## Register with Claude Code
+## Global Setup (Multi-Project Environments)
+
+**For users with multiple projects and virtual environments:**
+
+### 1. Install xlmcp Globally
 
 ```bash
-# - Add MCP server to Claude Code (uses .env configuration)
-claude mcp add --transport stdio xlmcp -- python -m xlmcp.server
+# Install in system Python (not in project venvs)
+pip install xlmcp
+# or: /usr/bin/python -m pip install xlmcp
+```
 
-# - Or with explicit environment variables
+### 2. Create Central Configuration
+
+```bash
+# Create config directory
+mkdir -p ~/.aix/xlmcp
+
+# Copy and configure .env
+cp .env.example ~/.aix/xlmcp/.env
+nano ~/.aix/xlmcp/.env  # Add your JUPYTER_API_TOKEN
+```
+
+**xlmcp automatically finds config in this order:**
+1. `.env` in current directory (project-specific override)
+2. `~/.aix/xlmcp/.env` (global default) ← **Recommended**
+3. Environment variables
+
+### 3. Register with Claude Code
+
+**Per-Project Registration:**
+
+```bash
+# In each project directory where you want xlmcp:
+cd /path/to/project
+source .venv/bin/activate  # If using venv
+claude mcp add --transport stdio xlmcp -- /usr/bin/python -m xlmcp.server
+```
+
+**Note:** Replace `/usr/bin/python` with your system Python path. Find it with: `which python` (outside any venv)
+
+**Verify:**
+```bash
+claude mcp list
+# Should show: xlmcp: /usr/bin/python -m xlmcp.server - ✓ Connected
+```
+
+**Benefits:**
+- ✅ One xlmcp installation for all projects
+- ✅ Central configuration in `~/.aix/xlmcp/.env`
+- ✅ Connects to Jupyter kernels in any project venv
+- ✅ No package conflicts between projects
+- ✅ Simple registration - direct Python invocation
+
+## Simple Setup (Single Project / Quick Start)
+
+**For single project or testing:**
+
+```bash
+# Install xlmcp
+pip install xlmcp
+
+# Create .env with your configuration
+cp .env.example .env
+nano .env  # Add JUPYTER_API_TOKEN
+
+# Register with Claude Code (from project directory)
+claude mcp add --transport stdio xlmcp -- python -m xlmcp.server
+```
+
+**Or with environment variables (no .env file needed):**
+
+```bash
 claude mcp add \
   -e JUPYTER_SERVER_URL=http://localhost:8888 \
   -e JUPYTER_API_TOKEN=your-token \
@@ -142,7 +208,7 @@ claude mcp add \
   -- python -m xlmcp.server
 ```
 
-**Note:** The `--` before `python` is required to separate MCP options from the server command.
+**Note:** The `--` before `python` separates MCP options from the server command.
 
 ## XLMCP CLI
 

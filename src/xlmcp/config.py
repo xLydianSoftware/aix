@@ -9,7 +9,17 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 # - Load environment variables
-load_dotenv()
+# Priority: 1) Current directory .env, 2) ~/.aix/xlmcp/.env, 3) Environment variables
+_local_env = Path(".env")
+_global_env = Path.home() / ".aix" / "xlmcp" / ".env"
+
+if _local_env.exists():
+    load_dotenv(_local_env)
+elif _global_env.exists():
+    load_dotenv(_global_env)
+else:
+    # - No .env file found, use environment variables only
+    load_dotenv(override=False)
 
 
 def get_env_str(key: str, default: str) -> str:
