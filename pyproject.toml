@@ -1,6 +1,6 @@
 [project]
 name = "xlmcp"
-version = "0.3.1"
+version = "0.3.2"
 description = "MCP server for JupyterHub/Jupyter/Qubx integration with Claude Code"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
