@@ -2,13 +2,13 @@
 
 Collection of MCP servers, agents, and extensions for quantitative development/research with Qubx.
 
-## XLMCP - Jupyter & Markdown RAG MCP Server
+## XLMCP - Jupyter & Knowledge RAG MCP Server
 
 XLMCP provides Claude Code with tools to:
 - Interact with Jupyter notebooks running on JupyterHub or standalone Jupyter Server
-- Search markdown documents using semantic search with tag/metadata filtering
+- Search knowledge files (.md, .py, .ipynb) using semantic search with tag/metadata filtering
 
-**Total Tools: 24** (16 Jupyter + 8 Markdown RAG)
+**Total Tools: 24** (16 Jupyter + 8 Knowledge RAG)
 
 ## Quick Reference
 
@@ -38,15 +38,15 @@ await jupyter_connect_notebook(notebook_path)
 await jupyter_execute_cell(notebook_path, cell_index, timeout=None)
 ```
 
-### Markdown RAG Tools (8)
+### Knowledge RAG Tools (8)
 
 ```python
 # - Indexing
-await markdown_index_directory(directory, recursive=True, force_reindex=False)
-await markdown_refresh_index(directory=None, recursive=True)
+await knowledge_index_directory(directory, recursive=True, force_reindex=False)
+await knowledge_refresh_index(directory=None, recursive=True)
 
 # - Searching
-await markdown_search(
+await knowledge_search(
     directory,
     query,
     tags=None,
@@ -56,13 +56,13 @@ await markdown_search(
 )
 
 # - Discovery
-await markdown_list_knowledges()  # List registered knowledge bases
-await markdown_list_indexes()     # List indexed directories
-await markdown_get_tags(directory)
-await markdown_get_metadata_fields(directory)
+await knowledge_list_knowledges()  # List registered knowledge bases
+await knowledge_list_indexes()     # List indexed directories
+await knowledge_get_tags(directory)
+await knowledge_get_metadata_fields(directory)
 
 # - Management
-await markdown_drop_index(directory)
+await knowledge_drop_index(directory)
 ```
 
 ## Installation
@@ -88,28 +88,42 @@ uv pip install -e .
 
 ## Configuration
 
+### Environment Setup
+
 1. Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
 
-2. Configure Jupyter Server:
+2. Edit `.env` and configure:
+
+**Jupyter Server (Required):**
 ```bash
-# - Edit .env
 JUPYTER_SERVER_URL=http://localhost:8888
 JUPYTER_API_TOKEN=your-token-here
+JUPYTER_NOTEBOOK_DIR=~/
+JUPYTER_ALLOWED_DIRS=~/projects,~/devs,~/research
 ```
 
-3. Configure RAG (optional, defaults provided):
+**RAG Configuration (Optional, defaults provided):**
 ```bash
 RAG_CACHE_DIR=~/.aix/knowledge
-RAG_CHUNK_SIZE=512
-RAG_CHUNK_OVERLAP=100
+RAG_CHUNK_SIZE=4096
+RAG_CHUNK_OVERLAP=512
 RAG_AUTO_REFRESH=true
 RAG_AUTO_REFRESH_INTERVAL=300
+RAG_MAX_FILE_SIZE_MB=10
+RAG_SKIP_NOTEBOOK_OUTPUTS=false
 ```
 
-4. Get your Jupyter API token:
+**MCP Server (Optional, defaults provided):**
+```bash
+MCP_TRANSPORT=stdio
+MCP_HTTP_PORT=8765
+MCP_MAX_OUTPUT_TOKENS=25000
+```
+
+### Get Jupyter API Token
    - **JupyterHub**: Admin panel → User → New API Token
    - **Jupyter Server**: `jupyter server list` shows the token
 
@@ -167,7 +181,7 @@ xlmcp stop
 > Execute code: print("Hello from Jupyter!")
 ```
 
-### Markdown Search
+### Knowledge Search
 
 ```
 > Search my research notes for "mean-reversion strategy entries"

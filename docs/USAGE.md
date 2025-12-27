@@ -10,10 +10,22 @@
 
 ### Install XLMCP
 
+**From PyPI (Recommended):**
+
+```bash
+# - Install with pip
+pip install xlmcp
+
+# - Or with uv
+uv pip install xlmcp
+```
+
+**From Source (Development):**
+
 ```bash
 cd ~/devs/aix
 
-# - Install with uv (recommended)
+# - Install in editable mode with uv (recommended)
 uv pip install -e .
 
 # - Or with pip
@@ -23,7 +35,7 @@ pip install -e .
 This installs:
 - `xlmcp` - CLI for server management
 - `xlmcp-server` - MCP server executable
-- All 24 MCP tools (16 Jupyter + 8 Markdown RAG)
+- All 24 MCP tools (16 Jupyter + 8 Knowledge RAG)
 
 ### Verify Installation
 
@@ -54,12 +66,14 @@ JUPYTER_EXEC_TIMEOUT=300
 
 # - RAG Configuration
 RAG_CACHE_DIR=~/.aix/knowledge
-RAG_CHUNK_SIZE=512
-RAG_CHUNK_OVERLAP=100
+RAG_CHUNK_SIZE=4096
+RAG_CHUNK_OVERLAP=512
 RAG_AUTO_REFRESH=true
 RAG_AUTO_REFRESH_INTERVAL=300
 RAG_DEFAULT_SEARCH_LIMIT=10
 RAG_DEFAULT_SIMILARITY_THRESHOLD=0.5
+RAG_MAX_FILE_SIZE_MB=5
+RAG_SKIP_NOTEBOOK_OUTPUTS=false
 
 # - MCP Configuration
 MCP_TRANSPORT=stdio
