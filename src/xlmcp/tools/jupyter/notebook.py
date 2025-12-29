@@ -87,18 +87,70 @@ async def read_cell(notebook_path: str, cell_index: int) -> str:
     }, indent=2)
 
 
+async def find_notebook_by_name(filename: str) -> str:
+    """
+    Find notebooks matching a filename.
+
+    Args:
+        filename: Notebook filename to search for
+
+    Returns:
+        JSON with matching notebook paths
+    """
+    client = get_client()
+    all_notebooks = await client.list_notebooks("", max_results=1000)
+
+    # - Find exact and partial matches
+    exact_matches = [nb for nb in all_notebooks if nb['name'] == filename]
+    partial_matches = [nb for nb in all_notebooks if filename.lower() in nb['name'].lower()]
+
+    return json.dumps({
+        "filename": filename,
+        "exact_matches": [nb['path'] for nb in exact_matches],
+        "partial_matches": [nb['path'] for nb in partial_matches[:10]],  # Limit to 10
+    }, indent=2)
+
+
 async def read_all_cells(notebook_path: str) -> str:
     """
     Read all cells from a notebook.
 
     Args:
-        notebook_path: Path to the notebook
+        notebook_path: Path to the notebook (relative to Jupyter root)
 
     Returns:
         JSON string with all cells
     """
+    import httpx
+
     client = get_client()
-    nb_data = await client.get_notebook(notebook_path)
+
+    try:
+        nb_data = await client.get_notebook(notebook_path)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            # - Notebook not found - try to help find it
+            import os
+            filename = os.path.basename(notebook_path)
+
+            # - Search for notebooks with this name
+            all_notebooks = await client.list_notebooks("", max_results=1000)
+            matches = [nb for nb in all_notebooks if nb['name'] == filename]
+
+            if matches:
+                suggestions = [nb['path'] for nb in matches[:5]]
+                return json.dumps({
+                    "error": f"Notebook not found: {notebook_path}",
+                    "suggestion": "Try using the full relative path from Jupyter root",
+                    "found_notebooks_with_same_name": suggestions,
+                }, indent=2)
+            else:
+                return json.dumps({
+                    "error": f"Notebook not found: {notebook_path}",
+                    "suggestion": "Use jupyter_list_notebooks to find available notebooks",
+                }, indent=2)
+        raise
+
     content = nb_data.get("content", {})
     cells = content.get("cells", [])
 

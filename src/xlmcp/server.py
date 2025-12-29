@@ -80,6 +80,22 @@ async def jupyter_list_notebooks(directory: str = "") -> str:
 
 
 @mcp.tool()
+async def jupyter_find_notebook(filename: str) -> str:
+    """
+    Find notebooks by filename.
+
+    Useful when you know the notebook name but not the full path.
+
+    Args:
+        filename: Notebook filename to search for (e.g., "analysis.ipynb")
+
+    Returns:
+        JSON with exact and partial matches including full paths
+    """
+    return await notebook.find_notebook_by_name(filename)
+
+
+@mcp.tool()
 async def jupyter_get_notebook_info(notebook_path: str) -> str:
     """
     Get information about a notebook including cell counts and kernel info.

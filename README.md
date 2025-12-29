@@ -237,6 +237,40 @@ xlmcp restart
 xlmcp stop
 ```
 
+### Knowledge Base CLI Commands
+
+The `xlmcp knowledge` commands let you test and verify your knowledge bases directly from the CLI:
+
+```bash
+# - List all knowledge bases with index status
+xlmcp knowledge list
+
+# - Search across all knowledge bases
+xlmcp knowledge search "momentum strategy"
+xlmcp knowledge search "ATR indicator" --kb library
+xlmcp knowledge search "risk management" --kb library --kb backtests
+xlmcp knowledge search "backtest" --limit 5 --threshold 0.6
+xlmcp knowledge search "options" --tags strategy
+
+# - Get tags from knowledge bases
+xlmcp knowledge tags                    # All knowledge bases
+xlmcp knowledge tags --kb library       # Specific knowledge base
+xlmcp knowledge tags --kb library --kb backtests
+
+# - Reindex knowledge bases
+xlmcp knowledge reindex library         # Reindex specific KB
+xlmcp knowledge reindex --all           # Reindex all KBs
+xlmcp knowledge reindex --all --force   # Force full reindex
+```
+
+**Command Options:**
+- `--kb <name>`: Specify one or more knowledge bases (can be repeated)
+- `--limit, -n`: Maximum number of results (default: 10)
+- `--threshold, -t`: Similarity threshold 0.0-1.0 (default: 0.5)
+- `--tags`: Filter by tags (for search command)
+- `--force`: Force full reindex (for reindex command)
+```
+
 ## Usage Examples
 
 ### Jupyter Notebooks

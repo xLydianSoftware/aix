@@ -283,8 +283,24 @@ class JupyterClient:
         response.raise_for_status()
         return response.json()
 
-    async def list_notebooks(self, directory: str = "") -> list[dict]:
-        """List notebooks in a directory."""
+    async def list_notebooks(self, directory: str = "", max_results: int = 1000) -> list[dict]:
+        """
+        List notebooks in a directory.
+
+        Args:
+            directory: Directory path (empty for root)
+            max_results: Maximum number of notebooks to return (default: 1000)
+
+        Returns:
+            List of notebook dicts (limited to max_results)
+        """
+        # - Directories to skip (common large directories)
+        SKIP_DIRS = {
+            'installs', 'node_modules', '.venv', 'venv', '__pycache__',
+            '.git', '.ipynb_checkpoints', 'build', 'dist', '.tox',
+            'site-packages', 'lib', 'vendor', 'deps'
+        }
+
         contents = await self.get_contents(directory)
 
         if contents.get("type") != "directory":
@@ -292,6 +308,10 @@ class JupyterClient:
 
         notebooks = []
         for item in contents.get("content", []):
+            # - Stop if we've hit the limit
+            if len(notebooks) >= max_results:
+                break
+
             if item.get("type") == "notebook":
                 notebooks.append({
                     "name": item.get("name"),
@@ -299,11 +319,18 @@ class JupyterClient:
                     "last_modified": item.get("last_modified"),
                 })
             elif item.get("type") == "directory":
-                # - Recursively list subdirectories
-                sub_notebooks = await self.list_notebooks(item.get("path", ""))
-                notebooks.extend(sub_notebooks)
+                # - Skip common large directories
+                dirname = item.get("name", "")
+                if dirname in SKIP_DIRS or dirname.startswith('.'):
+                    continue
 
-        return notebooks
+                # - Recursively list subdirectories (with remaining limit)
+                remaining = max_results - len(notebooks)
+                if remaining > 0:
+                    sub_notebooks = await self.list_notebooks(item.get("path", ""), remaining)
+                    notebooks.extend(sub_notebooks)
+
+        return notebooks[:max_results]
 
     async def get_notebook(self, path: str) -> dict:
         """Get notebook content."""
