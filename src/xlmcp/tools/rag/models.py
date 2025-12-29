@@ -23,7 +23,7 @@ class FileType(Enum):
         Get FileType from file extension (with or without dot).
 
         Args:
-            ext: File extension (e.g., 'md', '.md', 'py', '.py', 'ipynb', '.ipynb')
+            ext: File extension (e.g., 'md', '.md', 'py', '.py', '.pyx', 'ipynb', '.ipynb')
 
         Returns:
             FileType if recognized, None otherwise
@@ -31,8 +31,12 @@ class FileType(Enum):
         # - Remove leading dot and convert to lowercase
         ext = ext.lstrip(".").lower()
 
-        # - Build mapping dict
+        # - Build mapping dict with additional extensions
         ext_map = {ft.value: ft for ft in cls}
+
+        # - Add Cython (.pyx) as Python file type
+        ext_map['pyx'] = cls.PYTHON
+
         return ext_map.get(ext)
 
 

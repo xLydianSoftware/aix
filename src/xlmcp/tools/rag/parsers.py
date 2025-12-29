@@ -152,17 +152,18 @@ class JupyterParser:
         code_cells = sum(1 for c in cells if c.get("cell_type") == "code")
         markdown_cells = sum(1 for c in cells if c.get("cell_type") == "markdown")
 
-        # - Extract hashtags from markdown cells
-        tags = []
-        tag_pattern = r"#[a-zA-Z][a-zA-Z0-9_-]*"
+        # - Extract hashtags from markdown cells (using shared extraction logic)
+        from xlmcp.tools.rag.metadata import extract_inline_hashtags
 
+        tags = []
         for cell in cells:
             if cell.get("cell_type") == "markdown":
                 # - Join source lines if it's a list
                 source = cell.get("source", [])
                 if isinstance(source, list):
                     source = "".join(source)
-                cell_tags = re.findall(tag_pattern, source)
+                # - Use shared extraction logic (handles HTML/CSS removal and filtering)
+                cell_tags = extract_inline_hashtags(source)
                 tags.extend(cell_tags)
 
         # - Deduplicate tags

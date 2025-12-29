@@ -45,21 +45,21 @@ await jupyter_execute_cell(notebook_path, cell_index, timeout=None)
 await knowledge_index_directory(directory, recursive=True, force_reindex=False)
 await knowledge_refresh_index(directory=None, recursive=True)
 
-# - Searching
+# - Searching (directory optional - searches all KBs if not specified)
 await knowledge_search(
-    directory,
     query,
+    directory=None,        # None = search all registered KBs
     tags=None,
     metadata_filters=None,
     limit=10,
     threshold=0.5
 )
 
-# - Discovery
-await knowledge_list_knowledges()  # List registered knowledge bases
-await knowledge_list_indexes()     # List indexed directories
-await knowledge_get_tags(directory)
-await knowledge_get_metadata_fields(directory)
+# - Discovery (directory optional - aggregates from all KBs if not specified)
+await knowledge_list_knowledges()              # List registered knowledge bases
+await knowledge_list_indexes()                 # List indexed directories
+await knowledge_get_tags(directory=None)       # None = all KBs
+await knowledge_get_metadata_fields(directory=None)  # None = all KBs
 
 # - Management
 await knowledge_drop_index(directory)
@@ -249,10 +249,20 @@ xlmcp stop
 
 ### Knowledge Search
 
+Claude AI can search across ALL your knowledge bases without you specifying which one:
+
 ```
-> Search my research notes for "mean-reversion strategy entries"
-> Find all ideas tagged with #strategy related to risk management
-> List all backtests with sharpe > 1.5
+> Search my notes for "mean-reversion strategy entries"
+  (searches all registered knowledge bases)
+
+> Find ideas tagged with #strategy about risk management
+  (aggregates results from library, backtests, strategies, etc.)
+
+> Show me all backtests with sharpe > 1.5
+  (searches across all indexed directories)
+
+> Search only in backtests for "momentum factor"
+  (you can still specify a specific KB if needed)
 ```
 
 ## After Adding New Tools

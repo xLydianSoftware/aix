@@ -60,13 +60,17 @@ def list_knowledge_files(
         file_types: File types to include (default: all supported types)
 
     Returns:
-        List of absolute paths to knowledge files (.md, .py, .ipynb)
+        List of absolute paths to knowledge files (.md, .py, .pyx, .ipynb)
     """
     if file_types is None:
         file_types = [FileType.MARKDOWN, FileType.PYTHON, FileType.JUPYTER]
 
     # - Build set of extensions to match
     extensions = {f".{ft.value}" for ft in file_types}
+
+    # - Add Cython (.pyx) for Python file type
+    if FileType.PYTHON in file_types:
+        extensions.add(".pyx")
 
     knowledge_files = []
     directory = Path(directory)
@@ -251,7 +255,7 @@ async def index_directory(
         if files_by_type[FileType.MARKDOWN]:
             type_counts.append(f"{len(files_by_type[FileType.MARKDOWN])} .md")
         if files_by_type[FileType.PYTHON]:
-            type_counts.append(f"{len(files_by_type[FileType.PYTHON])} .py")
+            type_counts.append(f"{len(files_by_type[FileType.PYTHON])} .py/.pyx")
         if files_by_type[FileType.JUPYTER]:
             type_counts.append(f"{len(files_by_type[FileType.JUPYTER])} .ipynb")
         if type_counts:
@@ -350,8 +354,9 @@ async def index_directory(
             chunk_size=config.rag.chunk_size, chunk_overlap=config.rag.chunk_overlap
         ).get_nodes_from_documents(nodes)
 
-        # - Filter empty chunks
-        chunked_nodes = [node for node in chunked_nodes if node.text.strip()]
+        # - Filter empty and very short chunks (minimum 50 characters)
+        # - Very short chunks (like "Share this..." or "About the CD-ROM...") cause poor search results
+        chunked_nodes = [node for node in chunked_nodes if len(node.text.strip()) >= 50]
 
         if not chunked_nodes:
             return json.dumps(

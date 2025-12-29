@@ -19,7 +19,7 @@ def extract_inline_hashtags(text: str) -> list[str]:
     Extract inline hashtags from markdown text.
 
     Pattern: #[a-zA-Z][a-zA-Z0-9_-]*
-    Excludes code blocks, inline code, and HTML color codes.
+    Excludes code blocks, inline code, HTML tags, and CSS.
 
     Args:
         text: Markdown content
@@ -33,16 +33,47 @@ def extract_inline_hashtags(text: str) -> list[str]:
     # - Remove inline code (` ... `)
     text = re.sub(r"`[^`]*`", "", text)
 
-    # - Remove HTML color attributes (color='#...' or color="#...")
-    text = re.sub(r"""color\s*=\s*['"]#[a-fA-F0-9]{3,8}['"]""", "", text)
+    # - Remove HTML/XML tags completely (including style attributes)
+    # - This removes <tag attr="value">content</tag> and <tag attr="value" />
+    text = re.sub(r"<[^>]+>", "", text)
+
+    # - Remove CSS style blocks
+    text = re.sub(r"<style[\s\S]*?</style>", "", text, flags=re.IGNORECASE)
+
+    # - Remove inline style attributes that might have been left (style="...")
+    text = re.sub(r"""\bstyle\s*=\s*['"][^'"]*['"]""", "", text, flags=re.IGNORECASE)
 
     # - Find hashtags: # followed by letter, then letters/numbers/hyphens/underscores
-    # - Must NOT be followed by hex digits (to exclude standalone color codes)
-    pattern = r"#[a-zA-Z][a-zA-Z0-9_-]*(?![a-fA-F0-9])"
+    pattern = r"#[a-zA-Z][a-zA-Z0-9_-]*"
     tags = re.findall(pattern, text)
 
-    # - Filter out any remaining hex color codes (e.g., #ff0000, #f86d2d)
-    tags = [tag for tag in tags if not re.match(r"^#[a-fA-F0-9]{3,8}$", tag)]
+    # - Filter out hex color codes and false positives
+    def is_hex_color(tag: str) -> bool:
+        """Check if tag looks like a hex color code."""
+        # - Remove the # prefix
+        without_hash = tag[1:] if tag.startswith('#') else tag
+        # - Check if it's only hex digits and has valid length (3, 4, 6, or 8)
+        if re.match(r'^[a-fA-F0-9]+$', without_hash, re.IGNORECASE):
+            return len(without_hash) in (3, 4, 6, 8)
+        return False
+
+    def is_heading_marker(tag: str) -> bool:
+        """Check if tag looks like a markdown heading marker (#h0, #h1, etc.)."""
+        without_hash = tag[1:] if tag.startswith('#') else tag
+        # - Match h followed by digits (e.g., h0, h1, h2, h10)
+        return bool(re.match(r'^h\d+$', without_hash, re.IGNORECASE))
+
+    def is_valid_tag(tag: str) -> bool:
+        """Check if tag is valid (not a color, not a heading, not too short)."""
+        if len(tag) <= 2:  # Too short (just # + 1 char)
+            return False
+        if is_hex_color(tag):
+            return False
+        if is_heading_marker(tag):
+            return False
+        return True
+
+    tags = [tag for tag in tags if is_valid_tag(tag)]
 
     # - Return unique tags (case-sensitive)
     return list(set(tags))
@@ -132,7 +163,7 @@ def _extract_markdown_metadata(file_path: str) -> DocumentMetadata:
     """
     fm_data, content = parse_frontmatter(file_path)
 
-    # - Extract inline hashtags from content
+    # - Extract inline hashtags from content (already filtered)
     inline_tags = extract_inline_hashtags(content)
 
     # - Get frontmatter tags (could be list or string)
@@ -152,8 +183,29 @@ def _extract_markdown_metadata(file_path: str) -> DocumentMetadata:
         if tag:
             normalized_fm_tags.append(tag)
 
+    # - Filter frontmatter tags (same rules as inline tags)
+    # - This removes hex colors, heading markers, and very short tags
+    filtered_fm_tags = []
+    for tag in normalized_fm_tags:
+        # - Reuse the filtering logic from extract_inline_hashtags
+        without_hash = tag[1:] if tag.startswith('#') else tag
+
+        # - Skip if too short
+        if len(tag) <= 2:
+            continue
+
+        # - Skip if hex color (3, 4, 6, or 8 hex digits)
+        if re.match(r'^[a-fA-F0-9]+$', without_hash, re.IGNORECASE) and len(without_hash) in (3, 4, 6, 8):
+            continue
+
+        # - Skip if heading marker (h0, h1, etc.)
+        if re.match(r'^h\d+$', without_hash, re.IGNORECASE):
+            continue
+
+        filtered_fm_tags.append(tag)
+
     # - Combine and deduplicate tags
-    all_tags = list(set(normalized_fm_tags + inline_tags))
+    all_tags = list(set(filtered_fm_tags + inline_tags))
     all_tags.sort()  # Sort for consistency
 
     # - Extract other metadata fields

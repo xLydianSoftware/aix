@@ -5,6 +5,27 @@ Utility functions for xlmcp.
 import inspect
 
 
+# - ANSI color functions
+def __wrap_with_color(code):
+    def inner(text, bold=False):
+        c = code
+        if bold:
+            c = f"1;{c}"
+        return f"\033[{c}m{text}\033[0m"
+    return inner
+
+
+red, green, yellow, blue, magenta, cyan, white = (
+    __wrap_with_color("31"),
+    __wrap_with_color("32"),
+    __wrap_with_color("33"),
+    __wrap_with_color("34"),
+    __wrap_with_color("35"),
+    __wrap_with_color("36"),
+    __wrap_with_color("37"),
+)
+
+
 def list_server_tools() -> list[dict]:
     """
     List all MCP tools registered in the server.

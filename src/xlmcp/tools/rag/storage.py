@@ -96,6 +96,32 @@ def get_milvus_client(directory: str) -> MilvusClient:
     return _clients[sanitized]
 
 
+def cleanup_clients():
+    """
+    Close all cached Milvus clients and cleanup embedding function.
+
+    Call this at the end of CLI commands to avoid cleanup delays.
+    """
+    global _clients, _embedding_fn
+
+    # - Close all Milvus clients
+    for client in _clients.values():
+        try:
+            client.close()
+        except Exception:
+            pass
+    _clients.clear()
+
+    # - Cleanup embedding function
+    if _embedding_fn is not None:
+        try:
+            # - Force cleanup of embedding model
+            del _embedding_fn
+        except Exception:
+            pass
+        _embedding_fn = None
+
+
 def ensure_collection(client: MilvusClient, collection_name: str):
     """
     Ensure collection exists with correct schema.
@@ -183,12 +209,34 @@ async def list_all_indexes() -> str:
             with open(tracking_path) as f:
                 tracking = json.load(f)
 
-            file_count = len(tracking.get("files", {}))
+            files = tracking.get("files", {})
+            file_count = len(files)
             last_checked = tracking.get("last_checked", 0)
+
+            # - Extract original directory from file paths
+            original_dir = None
+            if files:
+                # - Get first file path and extract common parent
+                first_file = next(iter(files.keys()))
+                file_path = Path(first_file)
+                # - Find the common parent directory
+                # - Assume all files share a common root directory
+                original_dir = str(file_path.parent)
+                # - Try to find the shortest common path
+                for file in list(files.keys())[:10]:  # Check first 10 files
+                    fp = Path(file)
+                    # - Find common parts
+                    try:
+                        common = Path(*[p for p, q in zip(file_path.parts, fp.parts) if p == q])
+                        if len(common.parts) < len(Path(original_dir).parts):
+                            original_dir = str(common)
+                    except ValueError:
+                        pass
 
             indexes.append(
                 {
                     "cache_name": subdir.name,
+                    "directory": original_dir,
                     "file_count": file_count,
                     "last_checked": last_checked,
                     "cache_path": str(subdir),
