@@ -261,6 +261,9 @@ async def index_directory(
         if type_counts:
             _report(f"File types: {', '.join(type_counts)}")
 
+        # - Report chunk configuration
+        _report(f"Chunk config: size={config.rag.chunk_size} tokens, overlap={config.rag.chunk_overlap} tokens")
+
         # - Load documents based on file type
         from llama_index.core import Document
 
