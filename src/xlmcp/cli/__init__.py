@@ -613,9 +613,27 @@ def search(query: str, kb: tuple, limit: int, threshold: float, tags: tuple):
                     except Exception:
                         continue
 
-            # - Sort by score and limit
-            all_results.sort(key=lambda x: x.get('score', 0), reverse=True)
-            all_results = all_results[:limit]
+            # - Diversify results: take top N from each KB to avoid one KB dominating
+            # - Group results by knowledge base
+            results_by_kb = {}
+            for result in all_results:
+                kb = result.get('knowledge_base', 'unknown')
+                if kb not in results_by_kb:
+                    results_by_kb[kb] = []
+                results_by_kb[kb].append(result)
+
+            # - Take top results from each KB (ensures diversity across knowledge bases)
+            diverse_results = []
+            if results_by_kb:
+                results_per_kb = max(2, limit // len(results_by_kb))
+                for kb_results in results_by_kb.values():
+                    # - Sort this KB's results by score and take top N
+                    kb_results.sort(key=lambda x: x.get('score', 0), reverse=True)
+                    diverse_results.extend(kb_results[:results_per_kb])
+
+            # - Sort combined diverse results by score and apply final limit
+            diverse_results.sort(key=lambda x: x.get('score', 0), reverse=True)
+            all_results = diverse_results[:limit]
 
             result = {
                 'status': 'success',
