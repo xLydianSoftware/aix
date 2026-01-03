@@ -161,9 +161,24 @@ def append_log_entry(project: Project, entry: LogEntry) -> None:
             lines.insert(insert_index, f"- {entry.content}")
             log_file.write_text("\n".join(lines))
     else:
-        # - Create new section
-        with log_file.open("a") as f:
-            f.write(f"\n{section_header}\n- {entry.content}\n")
+        # - Create new section at the TOP (reverse chronological order)
+        lines = content.split("\n")
+
+        # - Find position after "# Project Log" header (skip empty lines)
+        insert_pos = 0
+        for i, line in enumerate(lines):
+            if line.strip().startswith("# Project Log"):
+                # - Skip past header and any empty lines
+                insert_pos = i + 1
+                while insert_pos < len(lines) and not lines[insert_pos].strip():
+                    insert_pos += 1
+                break
+
+        # - Insert new section at top
+        lines.insert(insert_pos, "")
+        lines.insert(insert_pos + 1, section_header)
+        lines.insert(insert_pos + 2, f"- {entry.content}")
+        log_file.write_text("\n".join(lines))
 
 
 def read_project_log(project: Project, limit: int = 10) -> list[LogEntry]:
