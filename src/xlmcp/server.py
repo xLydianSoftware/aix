@@ -14,6 +14,7 @@ from fastmcp import FastMCP  # noqa: E402
 from xlmcp.config import get_config  # noqa: E402
 from xlmcp.tools.jupyter import kernel, notebook  # noqa: E402
 from xlmcp.tools.rag import indexer, registry, searcher, storage  # noqa: E402
+from xlmcp.tools.projects import manager as projects  # noqa: E402
 
 # - Create MCP server
 config = get_config()
@@ -599,6 +600,150 @@ async def knowledge_list_knowledges() -> str:
         tags, existence status, and index status
     """
     return await registry.list_knowledges()
+
+
+# =============================================================================
+# Project Management Tools
+# =============================================================================
+
+
+@mcp.tool()
+async def project_create(
+    name: str, description: str = "", tags: list[str] | None = None, project_type: str | None = None
+) -> str:
+    """
+    Create a new project.
+
+    Projects are stored in ~/.aix/projects/ and contain:
+    - description.md: Project description and metadata
+    - log.md: Timestamped log entries
+    - context.json: Machine-readable project state
+
+    Args:
+        name: Project name (used as directory name)
+        description: Project description
+        tags: Optional tags for categorization
+        project_type: Optional project type (e.g., 'strategy', 'research', 'optimization')
+
+    Returns:
+        JSON with status and project information
+    """
+    return await projects.create_project(name, description, tags, project_type)
+
+
+@mcp.tool()
+async def project_list() -> str:
+    """
+    List all projects.
+
+    Returns:
+        JSON with list of all projects including name, status, type, tags, and timestamps
+    """
+    return await projects.list_projects()
+
+
+@mcp.tool()
+async def project_get(name: str) -> str:
+    """
+    Get detailed information about a project.
+
+    Args:
+        name: Project name
+
+    Returns:
+        JSON with project details including description, recent logs, and context
+    """
+    return await projects.get_project(name)
+
+
+@mcp.tool()
+async def project_update_description(name: str, description: str) -> str:
+    """
+    Update project description.
+
+    Args:
+        name: Project name
+        description: New description content
+
+    Returns:
+        JSON with status
+    """
+    return await projects.update_description(name, description)
+
+
+@mcp.tool()
+async def project_add_log(name: str, content: str, tags: list[str] | None = None) -> str:
+    """
+    Add a log entry to project.
+
+    Log entries are automatically timestamped and appended to the project's log.md file.
+
+    Args:
+        name: Project name
+        content: Log entry content (markdown supported)
+        tags: Optional tags for categorization (e.g., ['experiment', 'backtest', 'bug-fix'])
+
+    Returns:
+        JSON with status and entry timestamp
+    """
+    return await projects.add_log_entry(name, content, tags)
+
+
+@mcp.tool()
+async def project_read_log(name: str, limit: int = 10) -> str:
+    """
+    Read recent log entries from project.
+
+    Args:
+        name: Project name
+        limit: Maximum number of entries to return (default: 10)
+
+    Returns:
+        JSON with log entries (most recent first)
+    """
+    return await projects.read_log(name, limit)
+
+
+@mcp.tool()
+async def project_set_context(
+    name: str,
+    working_files: list[str] | None = None,
+    active_research: list[str] | None = None,
+    blockers: list[str] | None = None,
+    next_steps: list[str] | None = None,
+    knowledge_bases: list[str] | None = None,
+) -> str:
+    """
+    Set or update project context.
+
+    Context is machine-readable state stored in context.json. Only provided fields are updated.
+
+    Args:
+        name: Project name
+        working_files: Currently active files
+        active_research: Active research topics
+        blockers: Current blockers/issues
+        next_steps: Planned next steps
+        knowledge_bases: Related knowledge bases
+
+    Returns:
+        JSON with status
+    """
+    return await projects.set_context(name, working_files, active_research, blockers, next_steps, knowledge_bases)
+
+
+@mcp.tool()
+async def project_get_context(name: str) -> str:
+    """
+    Get project context.
+
+    Args:
+        name: Project name
+
+    Returns:
+        JSON with project context (working files, research topics, next steps, etc.)
+    """
+    return await projects.get_context(name)
 
 
 # =============================================================================

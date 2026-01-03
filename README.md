@@ -7,8 +7,9 @@ Collection of MCP servers, agents, and extensions for quantitative development/r
 XLMCP provides Claude Code with tools to:
 - Interact with Jupyter notebooks running on JupyterHub or standalone Jupyter Server
 - Search knowledge files (.md, .py, .ipynb) using semantic search with tag/metadata filtering
+- Manage research/development projects with tracking, logs, and context
 
-**Total Tools: 24** (16 Jupyter + 8 Knowledge RAG)
+**Total Tools: 32** (16 Jupyter + 8 Knowledge RAG + 8 Project Management)
 
 ## Quick Reference
 
@@ -65,6 +66,39 @@ await knowledge_get_metadata_fields(directory=None)  # None = all KBs
 await knowledge_drop_index(directory)
 ```
 
+### Project Management Tools (8)
+
+```python
+# - Project lifecycle
+await project_create(name, description="", tags=None, project_type=None)
+await project_list()
+await project_get(name)
+await project_update_description(name, description)
+
+# - Logging (date-based with bullet points)
+await project_add_log(name, content, tags=None)
+await project_read_log(name, limit=10)
+
+# - Context tracking (working files, next steps, blockers)
+await project_set_context(
+    name,
+    working_files=None,
+    active_research=None,
+    blockers=None,
+    next_steps=None,
+    knowledge_bases=None
+)
+await project_get_context(name)
+```
+
+**Project Structure:**
+```
+~/.aix/projects/<project-name>/
+├── description.md    # YAML frontmatter + description
+├── log.md           # Daily logs with bullet points
+└── context.json     # Machine-readable state
+```
+
 ## Installation
 
 ### From PyPI (Recommended)
@@ -108,8 +142,8 @@ JUPYTER_ALLOWED_DIRS=~/projects,~/devs,~/research
 **RAG Configuration (Optional, defaults provided):**
 ```bash
 RAG_CACHE_DIR=~/.aix/knowledge
-RAG_CHUNK_SIZE=4096
-RAG_CHUNK_OVERLAP=512
+RAG_CHUNK_SIZE=512
+RAG_CHUNK_OVERLAP=100
 RAG_AUTO_REFRESH=true
 RAG_AUTO_REFRESH_INTERVAL=300
 RAG_MAX_FILE_SIZE_MB=10

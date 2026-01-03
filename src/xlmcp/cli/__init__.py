@@ -889,6 +889,245 @@ def knowledges():
         sys.exit(1)
 
 
+# =============================================================================
+# Project Commands
+# =============================================================================
+
+
+@cli.group()
+def project():
+    """
+    Manage projects.
+
+    Projects are stored in ~/.aix/projects/ and contain description, logs, and context.
+
+    Examples:
+      xlmcp project create my-strategy --type strategy
+      xlmcp project list
+      xlmcp project log my-strategy "Implemented FDI adaptive SuperTrend"
+      xlmcp project show my-strategy
+    """
+    pass
+
+
+@project.command()
+@click.argument('name')
+@click.option('--description', '-d', default='', help='Project description')
+@click.option('--type', '-t', help='Project type (strategy, research, optimization, etc.)')
+@click.option('--tags', '-g', multiple=True, help='Project tags')
+def create(name: str, description: str, type: str | None, tags: tuple):
+    """Create a new project."""
+    import asyncio
+    from xlmcp.tools.projects import manager as projects
+
+    try:
+        tags_list = list(tags) if tags else None
+        result_json = asyncio.run(projects.create_project(name, description, tags_list, type))
+        result = json.loads(result_json)
+
+        if result.get('status') == 'success':
+            click.echo(f"✓ {result.get('message')}")
+            project_info = result.get('project', {})
+            click.echo(f"  Path: {project_info.get('path')}")
+            if project_info.get('type'):
+                click.echo(f"  Type: {project_info.get('type')}")
+            if project_info.get('tags'):
+                click.echo(f"  Tags: {', '.join(project_info.get('tags'))}")
+        else:
+            click.echo(f"✗ {result.get('message')}")
+            sys.exit(1)
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}")
+        sys.exit(1)
+
+
+@project.command()
+def list():
+    """List all projects."""
+    import asyncio
+    from xlmcp.tools.projects import manager as projects
+    from xlmcp.utils import cyan, green, yellow, blue
+
+    try:
+        result_json = asyncio.run(projects.list_projects())
+        result = json.loads(result_json)
+
+        if result.get('status') != 'success':
+            click.echo(f"✗ {result.get('message')}")
+            sys.exit(1)
+
+        projects_list = result.get('projects', [])
+
+        if not projects_list:
+            click.echo("No projects found.")
+            click.echo("\nCreate a project with: xlmcp project create <name>")
+            return
+
+        click.echo(f"{cyan('Projects', bold=True)} ({len(projects_list)}):\n")
+
+        for proj in projects_list:
+            # - Status indicator
+            status = proj.get('status', 'active')
+            status_color = green if status == 'active' else yellow if status == 'archived' else blue
+
+            click.echo(f"  • {cyan(proj['name'], bold=True)} [{status_color(status)}]")
+
+            if proj.get('type'):
+                click.echo(f"    Type: {proj['type']}")
+            if proj.get('tags'):
+                click.echo(f"    Tags: {', '.join(proj['tags'])}")
+
+            from datetime import datetime
+            updated = datetime.fromisoformat(proj['updated'])
+            click.echo(f"    Updated: {updated.strftime('%Y-%m-%d')}")
+            click.echo(f"    Path: {proj['path']}")
+            click.echo()
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}")
+        sys.exit(1)
+
+
+@project.command()
+@click.argument('name')
+def show(name: str):
+    """Show detailed project information."""
+    import asyncio
+    from xlmcp.tools.projects import manager as projects
+    from xlmcp.utils import cyan, green, yellow
+
+    try:
+        result_json = asyncio.run(projects.get_project(name))
+        result = json.loads(result_json)
+
+        if result.get('status') != 'success':
+            click.echo(f"✗ {result.get('message')}")
+            sys.exit(1)
+
+        proj = result.get('project', {})
+
+        click.echo(f"\n{cyan('Project:', bold=True)} {proj['name']}")
+        click.echo("=" * 60)
+
+        click.echo(f"\n{cyan('Status:', bold=True)} {proj['status']}")
+        if proj.get('type'):
+            click.echo(f"{cyan('Type:', bold=True)} {proj['type']}")
+        if proj.get('tags'):
+            click.echo(f"{cyan('Tags:', bold=True)} {', '.join(proj['tags'])}")
+
+        from datetime import datetime
+        created = datetime.fromisoformat(proj['created'])
+        updated = datetime.fromisoformat(proj['updated'])
+        click.echo(f"{cyan('Created:', bold=True)} {created.strftime('%Y-%m-%d')}")
+        click.echo(f"{cyan('Updated:', bold=True)} {updated.strftime('%Y-%m-%d')}")
+        click.echo(f"{cyan('Path:', bold=True)} {proj['path']}")
+
+        if proj.get('description'):
+            click.echo(f"\n{cyan('Description:', bold=True)}")
+            click.echo(proj['description'])
+
+        # - Show recent logs
+        recent_logs = proj.get('recent_logs', [])
+        if recent_logs:
+            click.echo(f"\n{cyan('Recent Logs:', bold=True)} (last {len(recent_logs)})")
+            for log in recent_logs:
+                timestamp = datetime.fromisoformat(log['timestamp'])
+                tags_str = f" [{', '.join(log['tags'])}]" if log.get('tags') else ""
+                click.echo(f"\n  {yellow(timestamp.strftime('%Y-%m-%d'))}{tags_str}")
+                click.echo(f"  {log['content']}")
+
+        # - Show context
+        context = proj.get('context')
+        if context:
+            click.echo(f"\n{cyan('Context:', bold=True)}")
+            if context.get('working_files'):
+                click.echo(f"  Working files: {', '.join(context['working_files'])}")
+            if context.get('active_research'):
+                click.echo(f"  Active research: {', '.join(context['active_research'])}")
+            if context.get('next_steps'):
+                click.echo("  Next steps:")
+                for step in context['next_steps']:
+                    click.echo(f"    - {step}")
+
+        click.echo()
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}")
+        sys.exit(1)
+
+
+@project.command()
+@click.argument('name')
+@click.argument('content')
+@click.option('--tags', '-g', multiple=True, help='Log entry tags')
+def log(name: str, content: str, tags: tuple):
+    """Add a log entry to project."""
+    import asyncio
+    from xlmcp.tools.projects import manager as projects
+
+    try:
+        tags_list = list(tags) if tags else None
+        result_json = asyncio.run(projects.add_log_entry(name, content, tags_list))
+        result = json.loads(result_json)
+
+        if result.get('status') == 'success':
+            entry = result.get('entry', {})
+            from datetime import datetime
+            timestamp = datetime.fromisoformat(entry['timestamp'])
+            click.echo(f"✓ Log entry added on {timestamp.strftime('%Y-%m-%d')}")
+            if entry.get('tags'):
+                click.echo(f"  Tags: {', '.join(entry['tags'])}")
+        else:
+            click.echo(f"✗ {result.get('message')}")
+            sys.exit(1)
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}")
+        sys.exit(1)
+
+
+@project.command()
+@click.argument('name')
+@click.option('--limit', '-n', default=10, help='Number of log entries to show')
+def logs(name: str, limit: int):
+    """Read project log entries."""
+    import asyncio
+    from xlmcp.tools.projects import manager as projects
+    from xlmcp.utils import cyan, yellow
+
+    try:
+        result_json = asyncio.run(projects.read_log(name, limit))
+        result = json.loads(result_json)
+
+        if result.get('status') != 'success':
+            click.echo(f"✗ {result.get('message')}")
+            sys.exit(1)
+
+        entries = result.get('entries', [])
+
+        if not entries:
+            click.echo(f"No log entries found for project '{name}'")
+            return
+
+        click.echo(f"\n{cyan('Project Logs:', bold=True)} {name}")
+        click.echo("=" * 60)
+
+        from datetime import datetime
+        for entry in entries:
+            timestamp = datetime.fromisoformat(entry['timestamp'])
+            tags_str = f" [{', '.join(entry['tags'])}]" if entry.get('tags') else ""
+
+            click.echo(f"\n{yellow(timestamp.strftime('%Y-%m-%d'))}{tags_str}")
+            click.echo(entry['content'])
+
+        click.echo()
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}")
+        sys.exit(1)
+
+
 def main():
     """Main CLI entry point."""
     cli()

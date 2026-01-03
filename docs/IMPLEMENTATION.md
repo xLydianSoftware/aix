@@ -2,9 +2,10 @@
 
 ## Architecture
 
-XLMCP is an MCP (Model Context Protocol) server providing Claude Code with 24 tools for:
+XLMCP is an MCP (Model Context Protocol) server providing Claude Code with 32 tools for:
 - **Jupyter Integration** (16 tools) - Interact with Jupyter notebooks and kernels
 - **Knowledge RAG Search** (8 tools) - Semantic search over knowledge files (.md, .py, .ipynb)
+- **Project Management** (8 tools) - Track projects with logs, context, and metadata
 
 ### Technology Stack
 
@@ -20,19 +21,23 @@ XLMCP is an MCP (Model Context Protocol) server providing Claude Code with 24 to
 ```
 src/xlmcp/
 ├── cli/
-│   └── __init__.py           # Click-based CLI (start/stop/status/ls)
+│   └── __init__.py           # Click-based CLI (start/stop/status/ls + project commands)
 ├── tools/
 │   ├── jupyter/
 │   │   ├── client.py         # Jupyter API client
 │   │   ├── kernel.py         # Kernel management
 │   │   └── notebook.py       # Notebook operations
-│   └── rag/
-│       ├── indexer.py        # Document indexing & auto-refresh
-│       ├── searcher.py       # Semantic search with filters
-│       ├── storage.py        # Milvus collections & tracking
-│       ├── metadata.py       # YAML frontmatter & hashtag extraction
-│       ├── models.py         # Pydantic data models
-│       └── registry.py       # Knowledge bases registry
+│   ├── rag/
+│   │   ├── indexer.py        # Document indexing & auto-refresh
+│   │   ├── searcher.py       # Semantic search with filters
+│   │   ├── storage.py        # Milvus collections & tracking
+│   │   ├── metadata.py       # YAML frontmatter & hashtag extraction
+│   │   ├── models.py         # Pydantic data models
+│   │   └── registry.py       # Knowledge bases registry
+│   └── projects/
+│       ├── models.py         # Project, LogEntry, ProjectContext models
+│       ├── storage.py        # File I/O for projects
+│       └── manager.py        # Project management logic
 ├── config.py                 # Configuration (Jupyter, MCP, RAG)
 ├── server.py                 # MCP server with tool registration
 └── utils.py                  # Utility functions
@@ -198,6 +203,148 @@ def get_changed_files(directory: str) -> list[str]:
 **Management:**
 - `knowledge_drop_index` - Remove index and cache
 
+## Project Management Implementation
+
+### Architecture
+
+Projects provide persistent context and logging for research/development workflows:
+- **Description** - Project metadata (YAML frontmatter) + markdown description
+- **Logs** - Daily summaries with bullet points (chronological, grouped by date)
+- **Context** - Machine-readable state (working files, next steps, blockers)
+
+### Storage Structure
+
+```
+~/.aix/projects/
+├── aix-development/
+│   ├── description.md    # YAML frontmatter + description
+│   ├── log.md           # Daily logs with bullet points
+│   └── context.json     # Working files, next steps, blockers
+└── storm-optimization/
+    ├── description.md
+    ├── log.md
+    └── context.json
+```
+
+### Data Models
+
+**Project Metadata** (YAML frontmatter in description.md):
+```python
+class ProjectMetadata:
+    name: str
+    created: datetime
+    updated: datetime
+    status: str = "active"  # active, archived, completed
+    tags: list[str] = []
+    type: str | None = None  # strategy, research, infrastructure, etc.
+    related_projects: list[str] = []
+```
+
+**Log Entry**:
+```python
+class LogEntry:
+    timestamp: datetime
+    content: str
+    tags: list[str] = []
+```
+
+**Project Context** (context.json):
+```python
+class ProjectContext:
+    project: str
+    last_updated: datetime
+    working_files: list[str] = []
+    active_research: list[str] = []
+    blockers: list[str] = []
+    next_steps: list[str] = []
+    knowledge_bases: list[str] = []
+    related_projects: list[str] = []
+```
+
+### Log Format
+
+**Daily sections with bullet points** (avoids duplicate date headers):
+
+```markdown
+# Project Log
+
+## 2026-01-03
+- Updated log timestamp format to date-only
+- Reviewed Obsidian Smart Connections scoring function
+- Updated project description with documentation links
+
+## 2026-01-02 [architecture, search, projects]
+**Projects System Implementation:**
+- Implemented complete projects management system
+- Added CLI commands with colorized output
+```
+
+**Append Logic:**
+1. Check if today's section exists
+2. If yes → add as bullet point under existing section
+3. If no → create new section with date header
+
+### MCP Tools
+
+**Project Lifecycle:**
+- `project_create(name, description, tags, type)` - Create new project
+- `project_list()` - List all projects with status
+- `project_get(name)` - Get project details + recent logs + context
+- `project_update_description(name, description)` - Update description
+
+**Logging:**
+- `project_add_log(name, content, tags)` - Add timestamped log entry
+- `project_read_log(name, limit)` - Read recent logs (most recent first)
+
+**Context:**
+- `project_set_context(name, ...)` - Update working files/next steps/blockers
+- `project_get_context(name)` - Get current project state
+
+### CLI Commands
+
+```bash
+# Create project
+xlmcp project create aix-development --type infrastructure --description "..."
+
+# List projects
+xlmcp project list
+
+# Show details
+xlmcp project show aix-development
+
+# Add log entry
+xlmcp project log aix-development "Implemented FDI adaptive SuperTrend"
+
+# View logs
+xlmcp project logs aix-development --limit 20
+```
+
+**Features:**
+- Colorized output (cyan headers, yellow timestamps, green/red status)
+- Status indicators (active/archived/completed)
+- Last update timestamps
+- Tag display
+
+### Use Cases
+
+**Strategy Development:**
+- Track implementation progress
+- Log backtest results with configs
+- Store context (working files, next optimizations)
+- Link to knowledge bases (strategies, indicators)
+
+**Research Workflows:**
+- Document experiment results
+- Track paper reading progress
+- Store research questions and hypotheses
+- Link related research streams
+
+**Infrastructure Projects:**
+- Log implementation milestones
+- Track architectural decisions
+- Document performance optimizations
+- Maintain project context across sessions
+
 ## Configuration System
 
 ### Environment Variables
@@ -247,7 +394,8 @@ knowledges:
 - `xlmcp stop` - Stop server (SIGTERM → SIGKILL)
 - `xlmcp restart` - Restart server
 - `xlmcp status` - Show PID, uptime, status
-- `xlmcp ls` - List all 24 tools
+- `xlmcp ls` - List all 32 tools
+- `xlmcp project <subcommand>` - Project management (create, list, show, log, logs)
 
 **Process Management:**
 - PID detection: `pgrep -f "xlmcp.server"`
@@ -291,8 +439,17 @@ knowledges:
 
 ## Future Enhancements
 
+**Knowledge RAG:**
 - Batch indexing across all knowledge bases
 - Search result ranking customization
 - Support for other document formats (PDF, DOCX)
 - Incremental embedding updates (avoid recomputing)
 - Search history and analytics
+
+**Project Management:**
+- Auto-logging hooks (git commits, backtests, file changes)
+- Project templates for common workflows
+- Search across project logs
+- Project archival and restoration
+- Context snapshots at milestones
+- Cross-project search and analytics
