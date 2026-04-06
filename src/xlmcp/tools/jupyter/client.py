@@ -27,6 +27,20 @@ class JupyterClient:
     def base_url(self) -> str:
         return self.config.server_url.rstrip("/")
 
+    def _to_jupyter_path(self, path: str) -> str:
+        """
+        Convert absolute filesystem path to Jupyter-relative path.
+        Jupyter contents API expects paths relative to notebook_dir (~/),
+        not absolute — otherwise /api/contents//home/... produces 403.
+        """
+        p = Path(path).expanduser().resolve()
+        root = self.config.notebook_dir.expanduser().resolve()
+        try:
+            return str(p.relative_to(root))
+        except ValueError:
+            # - path outside notebook_dir: strip leading slash as fallback
+            return str(p).lstrip("/")
+
     @property
     def headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -279,7 +293,8 @@ class JupyterClient:
     async def get_contents(self, path: str = "") -> dict:
         """Get contents at path (file or directory listing)."""
         client = await self._get_client()
-        response = await client.get(f"/api/contents/{path}")
+        jupyter_path = self._to_jupyter_path(path) if path else ""
+        response = await client.get(f"/api/contents/{jupyter_path}")
         response.raise_for_status()
         return response.json()
 
@@ -335,15 +350,17 @@ class JupyterClient:
     async def get_notebook(self, path: str) -> dict:
         """Get notebook content."""
         client = await self._get_client()
-        response = await client.get(f"/api/contents/{path}", params={"content": "1"})
+        jupyter_path = self._to_jupyter_path(path)
+        response = await client.get(f"/api/contents/{jupyter_path}", params={"content": "1"})
         response.raise_for_status()
         return response.json()
 
     async def save_notebook(self, path: str, content: dict) -> dict:
         """Save notebook content."""
         client = await self._get_client()
+        jupyter_path = self._to_jupyter_path(path)
         response = await client.put(
-            f"/api/contents/{path}",
+            f"/api/contents/{jupyter_path}",
             json={"type": "notebook", "content": content},
         )
         response.raise_for_status()
